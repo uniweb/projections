@@ -57,4 +57,4 @@ opaque bytes and generates nothing.
 
 ## License
 
-GPL-3.0-or-later
+Apache-2.0
