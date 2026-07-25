@@ -1,0 +1,44 @@
+{
+  "name": "@uniweb/projections",
+  "version": "0.1.0",
+  "description": "Projections of a Uniweb site's content — agent index, per-page markdown, search index. Pure JS, runs anywhere.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./search": "./src/search/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "keywords": [
+    "uniweb",
+    "projections",
+    "llms-txt",
+    "markdown",
+    "search"
+  ],
+  "author": "Proximify",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uniweb/projections.git"
+  },
+  "homepage": "https://github.com/uniweb/projections#readme",
+  "bugs": {
+    "url": "https://github.com/uniweb/projections/issues"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@uniweb/content-writer": "workspace:*",
+    "@uniweb/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@uniweb/content-reader": "workspace:*",
+    "vitest": "^4.1.7"
+  }
+}
