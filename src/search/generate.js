@@ -68,6 +68,41 @@ export function generateSearchIndex(siteContent, options = {}) {
 }
 
 /**
+ * Merge a pages index with collection indexes into the single-file form.
+ *
+ * Two layouts exist because two consumers want different things, and neither
+ * is wrong:
+ *
+ * - **Split** (`_search/{locale}/pages.json` + `{name}.json`) suits a *server*
+ *   that loads only the parts a query needs.
+ * - **Merged** (`search-index.json`) suits a *browser* that needs all of it —
+ *   one request rather than N+1, and no manifest to discover the parts from.
+ *
+ * The bug was never that both exist; it was that a lane emitted only one of
+ * them while a consumer of the other was pointed at it. Emitting both from the
+ * same entries costs a serialization, keeps the client working on every lane
+ * with no configuration, and means a host declaring search never has to
+ * describe *where the index lives* — only whether it serves queries.
+ *
+ * @param {Object} pagesIndex - Result of {@link generateSearchIndex}
+ * @param {Object[]} [collectionIndexes] - Results of `generateCollectionIndex`
+ * @returns {Object} One index carrying every entry
+ */
+export function mergeSearchIndexes(pagesIndex, collectionIndexes = []) {
+  const entries = [
+    ...(pagesIndex?.entries || []),
+    ...collectionIndexes.flatMap(index => index?.entries || [])
+  ]
+
+  return {
+    version: pagesIndex?.version || '1.0',
+    locale: pagesIndex?.locale,
+    count: entries.length,
+    entries
+  }
+}
+
+/**
  * Check if search is enabled for a site
  * @param {Object} siteContent - Parsed site-content.json
  * @returns {boolean}

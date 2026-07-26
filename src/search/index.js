@@ -37,6 +37,7 @@ export {
 
 export {
   generateSearchIndex,
+  mergeSearchIndexes,
   isSearchEnabled,
   getSearchConfig,
   getSearchIndexFilename
