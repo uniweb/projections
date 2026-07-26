@@ -21,7 +21,7 @@
 
 import { renderSiteIndex } from '../src/site-index.js'
 import { renderPageMarkdown } from '../src/markdown.js'
-import { generateSearchIndex } from '../src/search/index.js'
+import { generateSearchIndex, generateCollectionIndex } from '../src/search/index.js'
 import { page, container, section, site } from './helpers.js'
 
 const fixture = () =>
@@ -75,15 +75,25 @@ describe('no ambient input', () => {
     expect(renderSiteIndex(fixture())).not.toMatch(/\d{4}-\d{2}-\d{2}/)
   })
 
-  test('the search index DOES carry a timestamp — parity is per-field', () => {
-    // Documenting the known exception rather than pretending it away: the
-    // search index stamps `generated`, so a byte-comparison across publishers
-    // has to exclude that field (or the field has to go).
+  test('the search index carries no timestamp either — parity is whole-artifact', () => {
+    // This used to assert the opposite, documenting `generated` as a known
+    // exception a byte-comparison had to exclude. The field is gone: a clock
+    // in a derived artifact cannot be content-addressed, so an unchanged index
+    // was re-uploading on every publish, and parity had to be argued per-field
+    // rather than simply held. The exception was the bug.
     const index = generateSearchIndex(fixture(), { locale: 'en' })
-    expect(index.generated).toBeTruthy()
+    expect(index.generated).toBeUndefined()
 
-    const { generated: _a, ...a } = index
-    const { generated: _b, ...b } = generateSearchIndex(fixture(), { locale: 'en' })
-    expect(a).toEqual(b)
+    expect(index).toEqual(generateSearchIndex(fixture(), { locale: 'en' }))
+  })
+
+  test('a collection index carries no timestamp', () => {
+    const config = { route: '/blog', search: { fields: ['title'] } }
+    const data = { items: [{ slug: 'a', title: 'Alpha' }] }
+
+    const index = generateCollectionIndex('posts', config, data, 'en')
+    expect(index.generated).toBeUndefined()
+
+    expect(index).toEqual(generateCollectionIndex('posts', config, data, 'en'))
   })
 })

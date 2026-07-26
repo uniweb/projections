@@ -48,11 +48,18 @@ export function generateSearchIndex(siteContent, options = {}) {
   // Extract searchable content
   const entries = extractSearchContent(siteContent, mergedExtractOptions)
 
-  // Build the index
+  // Build the index.
+  //
+  // Deliberately no `generated` timestamp. A clock in a derived artifact
+  // cannot be content-addressed: every publish produces different bytes, so a
+  // content-addressed asset store never recognizes an unchanged index and
+  // re-uploads it forever. It also breaks byte-parity between publishers,
+  // which is the property this package exists to guarantee. Nothing read the
+  // field. If a freshness signal is ever needed it belongs in delivery
+  // metadata, not in the artifact.
   const index = {
     version: '1.0',
     locale,
-    generated: new Date().toISOString(),
     count: entries.length,
     entries
   }

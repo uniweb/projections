@@ -36,11 +36,12 @@ export function generateCollectionIndex(name, config, collectionData, locale) {
     }
   })
 
+  // No `generated` timestamp — see the note in `generate.js`. A clock defeats
+  // content-addressing and byte-parity between publishers.
   return {
     type: 'collection',
     collection: name,
     locale,
-    generated: new Date().toISOString(),
     entries,
   }
 }
