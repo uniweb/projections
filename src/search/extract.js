@@ -5,6 +5,11 @@
  * for search indexing. Reuses patterns from i18n extraction.
  */
 
+// Leaf subpath, not the bare `@uniweb/core` entry: this package's environment
+// contract forbids the package root (it pulls semantic-parser + theming).
+// Enforced by tests/environment.test.js.
+import { sectionDomId } from '@uniweb/core/section-id'
+
 /**
  * Extract all searchable content from site
  * @param {Object} siteContent - Parsed site-content.json
@@ -157,7 +162,12 @@ function extractFromSection(section, page, options) {
       type: 'section',
       route: page.route,
       sectionId,
-      anchor: `Section${sectionId}`,
+      // The anchor MUST equal the id the renderer writes, or the result links
+      // to a fragment that does not exist — it lands on the page without
+      // scrolling, and does nothing at all when the target is the current
+      // page. Derived by the shared rule rather than spelled out here,
+      // because that is exactly how the two drifted apart before.
+      anchor: sectionDomId(section),
       component,
       title: sectionTitle,
       pageTitle: page.title || '',

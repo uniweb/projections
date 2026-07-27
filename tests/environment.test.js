@@ -27,6 +27,7 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', 'src')
 const ALLOWED_PACKAGES = new Set([
   '@uniweb/content-writer',
   '@uniweb/core/locale-config',
+  '@uniweb/core/section-id',
 ])
 
 /** Globals that only exist in one environment. */
