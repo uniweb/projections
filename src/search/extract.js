@@ -108,12 +108,17 @@ function extractFromPage(page) {
 
 /**
  * Extract search entries from a section (and subsections)
+ *
  * @param {Object} section - Section data
  * @param {Object} page - Parent page
  * @param {Object} options - Extraction options
+ * @param {string} [ancestorAnchor] - The anchor of the nearest ancestor that
+ *   is actually rendered with a wrapper. Absent at the top level, where the
+ *   section renders itself; inherited by every nested level. See the note on
+ *   anchors below.
  * @returns {Array<Object>} Array of search entries
  */
-function extractFromSection(section, page, options) {
+function extractFromSection(section, page, options, ancestorAnchor) {
   const entries = []
   const {
     includeHeadings,
@@ -125,6 +130,27 @@ function extractFromSection(section, page, options) {
 
   const sectionId = section.id || 'unknown'
   const component = section.component || section.type || 'unknown'
+
+  // Where a reader gets taken for a hit in this section.
+  //
+  // A top-level section is wrapped by the renderer and carries its own id, so
+  // it is its own destination. A NESTED section usually is not: `<ChildBlocks>`
+  // renders children bare by default — no wrapper, and therefore no id — and
+  // whether a foundation opted into `wrapAs` is a runtime decision this
+  // build-time pass cannot see. Emitting the child's own id produced a
+  // fragment that existed nowhere, so a hit landed on the page without
+  // scrolling and did nothing at all when the reader was already on it.
+  //
+  // The nearest rendered ancestor is the honest answer: it always exists, and
+  // the child's content is physically inside it, so the reader lands where the
+  // matching text actually is. Precision is lost only in the rarer `wrapAs`
+  // case, where the alternative was being wrong in the common one.
+  //
+  // Consequence worth knowing: a parent and its children now share an anchor,
+  // so several results can point at one destination. They are still distinct
+  // content with their own titles and excerpts; which to surface is the
+  // consumer's ranking decision, not ours to collapse here.
+  const anchor = ancestorAnchor || sectionDomId(section)
 
   // Skip excluded components
   if (excludeComponents.includes(component)) {
@@ -162,12 +188,9 @@ function extractFromSection(section, page, options) {
       type: 'section',
       route: page.route,
       sectionId,
-      // The anchor MUST equal the id the renderer writes, or the result links
-      // to a fragment that does not exist — it lands on the page without
-      // scrolling, and does nothing at all when the target is the current
-      // page. Derived by the shared rule rather than spelled out here,
-      // because that is exactly how the two drifted apart before.
-      anchor: sectionDomId(section),
+      // Resolved above. Never spelled out here: the id format is the shared
+      // rule's to own, which is exactly how these two drifted apart before.
+      anchor,
       component,
       title: sectionTitle,
       pageTitle: page.title || '',
@@ -179,9 +202,14 @@ function extractFromSection(section, page, options) {
     })
   }
 
-  // Recursively process subsections
+  // Recursively process subsections.
+  //
+  // `anchor` is passed down rather than the subsection resolving its own, so
+  // every level below the rendered one inherits the same destination — a
+  // grandchild is no more rendered than its parent, and inheriting only one
+  // level would put it back to naming an id that does not exist.
   for (const subsection of section.subsections || []) {
-    const subEntries = extractFromSection(subsection, page, options)
+    const subEntries = extractFromSection(subsection, page, options, anchor)
     entries.push(...subEntries)
   }
 
