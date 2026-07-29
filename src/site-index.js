@@ -30,18 +30,30 @@ const ROOT_GROUP_TITLE = 'Pages'
  * @param {string} [options.description] - Override the site summary
  * @param {string} [options.rootGroupTitle] - Heading for ungrouped pages
  * @param {number} [options.maxDescriptionChars=200]
+ * @param {string} [options.branch] - Scope to one route subtree (a branch index).
+ *   Title and summary then come from that branch's container page. The document
+ *   is otherwise identical, so one renderer serves both — see
+ *   {@link selectIndexBranches} for why a branch index is additive rather than a
+ *   delegation.
  * @returns {string} The index document
  */
 export function renderSiteIndex(siteContent, options = {}) {
   const config = siteContent?.config || {}
+  const { branch = null } = options
+
+  // A branch index is titled by its container, not by the site.
+  const branchPage = branch
+    ? (siteContent?.pages || []).find(page => page.route === branch)
+    : null
+
   const {
     baseUrl = config.seo?.baseUrl || '',
     basePath = '',
     locale = config.activeLocale,
     defaultLocale,
     exclude = [],
-    title = config.title || config.name || 'Site',
-    description = config.description || '',
+    title = branchPage?.title || branchPage?.label || config.title || config.name || 'Site',
+    description = branchPage?.description || (branch ? '' : config.description || ''),
     rootGroupTitle = ROOT_GROUP_TITLE,
     maxDescriptionChars = 200,
   } = options
@@ -60,7 +72,7 @@ export function renderSiteIndex(siteContent, options = {}) {
     lines.push('', ...blockquote(description))
   }
 
-  const groups = groupPagesForIndex(siteContent?.pages, { exclude })
+  const groups = groupPagesForIndex(siteContent?.pages, { exclude, branch })
 
   for (const group of groups) {
     const entries = group.pages

@@ -29,12 +29,15 @@ export { resolvePageDescription } from './description.js'
 
 export {
   INDEX_FILENAME,
+  DEFAULT_BRANCH_MIN_PAGES,
   pageMarkdownFilename,
+  branchIndexFilename,
   resolveAgentsConfig,
 } from './config.js'
 
 export {
   selectIndexablePages,
+  selectIndexBranches,
   groupPagesForIndex,
   buildPageUrl,
   applyRouteTranslation,

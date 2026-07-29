@@ -111,9 +111,70 @@ function isIndexable(page, branches) {
  * @param {string[]} [options.exclude] - Additional route prefixes
  * @returns {Object[]}
  */
-export function selectIndexablePages(pages = [], { exclude = [] } = {}) {
+export function selectIndexablePages(pages = [], { exclude = [], branch = null } = {}) {
   const branches = excludedBranches(pages, exclude)
-  return pages.filter(page => isIndexable(page, branches) && !isContainer(page))
+  return pages.filter(
+    page =>
+      isIndexable(page, branches) &&
+      !isContainer(page) &&
+      (!branch || isAtOrUnder(page.route, branch))
+  )
+}
+
+/** Route depth: `/docs` → 1, `/docs/authoring` → 2. */
+function routeDepth(route) {
+  return (route || '').split('/').filter(Boolean).length
+}
+
+/**
+ * Branches that warrant an index of their own (`/docs/llms.txt`).
+ *
+ * **A branch index is ADDITIVE, never a delegation.** The root index keeps
+ * enumerating every page: Phase 1's exit criterion is that a cold agent reaches
+ * a leaf in *two hops* (`/llms.txt` → the `.md`), and routing it through a
+ * branch index would make that three. So these are a scoped entry point for an
+ * agent already inside a branch — not a way to shrink the root.
+ *
+ * Consequently this does **not** close the index-size question: the root is
+ * still complete by design, so a large site's root index is still large. A
+ * size-based split is a separate decision, and it has to reckon with the
+ * two-hop criterion the same way.
+ *
+ * **Top-level containers only.** A branch index at every depth multiplies files
+ * without adding reachability — everything under `/docs/authoring` is already
+ * in both `/llms.txt` and `/docs/llms.txt`.
+ *
+ * @param {Object[]} pages - `siteContent.pages` (flat, already ordered)
+ * @param {Object} [options]
+ * @param {string[]} [options.exclude]
+ * @param {number} [options.minPages=5] - Below this, a branch rides the root index alone
+ * @returns {Array<{route: string, title: string, count: number}>}
+ */
+export function selectIndexBranches(pages = [], { exclude = [], minPages = 5 } = {}) {
+  const branchExclusions = excludedBranches(pages, exclude)
+  const out = []
+
+  for (const container of pages) {
+    if (!isContainer(container)) continue
+    if (!isIndexable(container, branchExclusions)) continue
+    if (routeDepth(container.route) !== 1) continue
+
+    const count = pages.filter(
+      page =>
+        isIndexable(page, branchExclusions) &&
+        !isContainer(page) &&
+        isAtOrUnder(page.route, container.route)
+    ).length
+
+    if (count < minPages) continue
+    out.push({
+      route: container.route,
+      title: container.title || container.label || container.route,
+      count,
+    })
+  }
+
+  return out
 }
 
 /**
@@ -127,16 +188,22 @@ export function selectIndexablePages(pages = [], { exclude = [] } = {}) {
  * @param {string[]} [options.exclude]
  * @returns {Array<{heading: string|null, route: string|null, pages: Object[]}>}
  */
-export function groupPagesForIndex(pages = [], { exclude = [] } = {}) {
+export function groupPagesForIndex(pages = [], { exclude = [], branch = null } = {}) {
   const branches = excludedBranches(pages, exclude)
   const containers = pages.filter(p => isContainer(p) && isIndexable(p, branches))
-  const indexable = pages.filter(p => isIndexable(p, branches) && !isContainer(p))
+  const indexable = pages.filter(
+    p => isIndexable(p, branches) && !isContainer(p) && (!branch || isAtOrUnder(p.route, branch))
+  )
 
   // Nearest container ancestor = the longest container route the page sits under.
   const groupFor = page => {
     let best = null
     for (const container of containers) {
       if (container.route === page.route) continue
+      // In a branch index the branch container is the document's own subject —
+      // its title is already the H1 — so it must not also become a `## ` group.
+      // Its direct children belong in the leading unheaded group instead.
+      if (branch && container.route === branch) continue
       if (!isAtOrUnder(page.route, container.route)) continue
       if (!best || container.route.length > best.route.length) best = container
     }
