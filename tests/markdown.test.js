@@ -33,6 +33,21 @@ describe('renderPageMarkdown', () => {
     expect(output).toContain('![A diagram](@NetworkDiagram){variant=compact}')
   })
 
+  test('a concept block projects its PROSE, not a serialization artifact', () => {
+    // The retrieval projection runs a whole section doc through content-writer,
+    // so an unmapped node type surfaces here exactly as it does in the file
+    // round trip: the block is omitted and the author's prose leaves with it.
+    // An agent fetching this page would be told the FAQ does not exist.
+    const p = page('/faq', {
+      sections: [section('```md:faq\n# What plans do you have?\nWe have three.\n```')],
+    })
+    const output = renderPageMarkdown(p)
+
+    expect(output).toContain('md:faq')
+    expect(output).toContain('# What plans do you have?')
+    expect(output).toContain('We have three.')
+  })
+
   test('emits no frontmatter, no section type, no params', () => {
     const p = page('/x', {
       sections: [section('# Hero', { type: 'Hero', params: { columns: 3, variant: 'centered' } })],
