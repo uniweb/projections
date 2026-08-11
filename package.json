@@ -34,8 +34,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@uniweb/content-writer": "workspace:*",
-    "@uniweb/core": "workspace:*"
+    "@uniweb/content-writer": "workspace:^",
+    "@uniweb/core": "workspace:^"
   },
   "devDependencies": {
     "@uniweb/content-reader": "workspace:*",
