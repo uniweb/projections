@@ -9,9 +9,16 @@
  *
  * So the invariant is enforced rather than documented: every module reachable
  * from this package's entry points must be importable from Node, from a
- * browser bundle, and from a Worker alike. The app is a browser call site,
- * which makes browser-safety the binding constraint — stricter than
- * Worker-safety, and it subsumes it.
+ * browser bundle, and from a Worker alike.
+ *
+ * **Worker-safety is the binding constraint.** A consumer imports this package
+ * into a Worker runtime and derives on the request path, so a `node:` builtin
+ * or a bundler-only import is not a latent portability wish — it breaks a live
+ * call site. An earlier revision of this header named browser-safety instead,
+ * on the strength of a publish-from-the-browser call site that no longer
+ * exists. The three-way rule above never changed; only which of the three is
+ * load-bearing did, and it is the one an assumed-strictest argument had
+ * treated as already subsumed.
  *
  * This test walks the real import graph, so it fails on a transitive
  * violation, not just a direct one.
