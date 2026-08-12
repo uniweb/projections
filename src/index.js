@@ -28,6 +28,13 @@ export { renderPageMarkdown } from './markdown.js'
 export { resolvePageDescription } from './description.js'
 
 export {
+  buildCorpus,
+  buildCorpusManifest,
+  selectCorpusPages,
+  partitionKnowledgePages,
+} from './corpus.js'
+
+export {
   INDEX_FILENAME,
   DEFAULT_BRANCH_MIN_PAGES,
   pageMarkdownFilename,

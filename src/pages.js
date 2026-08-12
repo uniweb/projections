@@ -43,17 +43,24 @@ export function isDynamicTemplate(page) {
  * @param {string} route
  * @returns {boolean}
  */
-function hasDraftSegment(route) {
+export function hasDraftSegment(route) {
   return (route || '').split('/').some(segment => segment.startsWith('_'))
 }
 
 /**
  * Is `route` at or beneath `prefix`?
+ *
+ * ⚠️ Exported for `corpus.js`, which composes the same exclusions with a
+ * different policy — NOT re-exported from `index.js`. It is a package-internal
+ * primitive, and one shared implementation of "is this route inside that
+ * branch" is the point: two copies of prefix matching is how `/kb` starts
+ * matching `/kbase`.
+ *
  * @param {string} route
  * @param {string} prefix
  * @returns {boolean}
  */
-function isAtOrUnder(route, prefix) {
+export function isAtOrUnder(route, prefix) {
   if (prefix === '/') return true
   return route === prefix || route.startsWith(`${prefix}/`)
 }
