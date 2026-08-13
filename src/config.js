@@ -22,6 +22,29 @@ const DEFAULTS = {
 }
 
 /**
+ * Every key the `agents:` block accepts — the author-facing vocabulary.
+ *
+ * ⚠️ **This is deliberately WIDER than what {@link resolveAgentsConfig} reads.**
+ * Some keys are *carried* rather than honoured: the framework passes them
+ * through to the host, which enforces them, and this package never looks at
+ * them. `expectedOrigins` is the first — the host checks the `Origin` of
+ * requests to its agent endpoint against it.
+ *
+ * ⛔ **A carry-only key still has to be listed here, and the reason is the whole
+ * point of the list.** The block reaches a backend as opaque JSON, so nothing
+ * downstream can reject a typo — an author who writes `expectedOrgins` gets a
+ * site that looks configured and checks nothing, silently, forever. The only
+ * lane that can catch it is the one that owns the words. `uniweb doctor` reads
+ * this list; if you add a key to the block and not to this list, doctor will
+ * call the author's correct spelling a typo.
+ */
+export const AGENTS_KEYS = Object.freeze([
+  ...Object.keys(DEFAULTS),
+  // Carried, not honoured here — see the note above before removing.
+  'expectedOrigins',
+])
+
+/**
  * Read the site's `agents:` block.
  *
  * Deliberately NOT `features:` — that list is the billing-intent declaration

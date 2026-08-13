@@ -37,6 +37,7 @@ export {
 export {
   INDEX_FILENAME,
   DEFAULT_BRANCH_MIN_PAGES,
+  AGENTS_KEYS,
   pageMarkdownFilename,
   branchIndexFilename,
   resolveAgentsConfig,
