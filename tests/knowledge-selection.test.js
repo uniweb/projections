@@ -1,11 +1,16 @@
 /**
- * `knowledge:` pages are agent-only. They are never rendered, so nothing that
- * describes the PUBLIC site may name them — not the agent index, not the
- * per-page markdown, not the search index. They enter exactly one projection:
- * the corpus, which is the paid Intelligence tier's input.
+ * `knowledge:` pages are source material for a service the site runs for its
+ * visitors — prose written for that service to reason with, not for a person
+ * to read. They are never rendered, so nothing describing the PUBLIC site may
+ * name them: not the agent index, not the per-page markdown, not the search
+ * index. They enter exactly one projection, the corpus.
  *
- * These are regression tests for a live disclosure. Before the fix, all three
- * public projections carried a knowledge page's route, title and body.
+ * ⚠️ Not a confidentiality boundary. [Diego, 2026-08-13] "It is not the case
+ * that it's private in the sense of sensitive" — the service quotes this
+ * material back to whoever prompts it, by design. What these tests protect is
+ * that prose addressed to the assistant does not turn up in a file describing
+ * what visitors read. Before the fix, all three public projections carried a
+ * knowledge page's route, title and body.
  */
 
 import { describe, it, expect } from 'vitest'
@@ -18,7 +23,7 @@ import { page, container, section, site } from './helpers.js'
 const routesOf = pages => pages.map(p => p.route)
 const routesIn = index => [...new Set(index.entries.map(e => e.route))]
 
-/** A site with one public page and a knowledge branch holding a secret. */
+/** A site with one public page and a knowledge branch written for the assistant. */
 function siteWithKnowledge(extra = []) {
   return site([
     page('/about', { title: 'About Us', sections: [section('We make public things.')] }),
@@ -28,8 +33,8 @@ function siteWithKnowledge(extra = []) {
       sections: [section('How to answer questions.')],
     }),
     page('/kb/pricing', {
-      title: 'Internal Pricing Playbook',
-      sections: [section('Our floor discount codename is zebranaut.')],
+      title: 'How To Answer Pricing Questions',
+      sections: [section('Lead with total cost of ownership; the marker word is zebranaut.')],
     }),
     ...extra,
   ])
@@ -42,12 +47,12 @@ describe('the search index is visitor-facing, so knowledge pages stay out', () =
     expect(routesIn(index)).toEqual(['/about'])
   })
 
-  it('leaks neither the title nor the body of an agent-only page', () => {
+  it('carries neither the title nor the body of an assistant-addressed page', () => {
     const index = generateSearchIndex(siteWithKnowledge(), { locale: 'en' })
     const serialized = JSON.stringify(index)
 
     expect(serialized).not.toContain('zebranaut')
-    expect(serialized).not.toContain('Internal Pricing Playbook')
+    expect(serialized).not.toContain('How To Answer Pricing Questions')
     // Control: the public page IS there, so the assertions above are measuring
     // selection rather than an extractor that silently produced nothing.
     expect(serialized).toContain('We make public things.')
@@ -115,7 +120,7 @@ describe('adopting the shared selector closes the rest of the gap too', () => {
   })
 })
 
-describe('the free agent projections stay out too', () => {
+describe('the public agent projections stay out too', () => {
   it('llms.txt names no knowledge page', () => {
     const index = renderSiteIndex(siteWithKnowledge(), { baseUrl: 'https://example.com' })
 
@@ -129,7 +134,7 @@ describe('the free agent projections stay out too', () => {
   })
 })
 
-describe('⭐ the PAID corpus is unchanged — knowledge pages still reach the agent', () => {
+describe('⭐ the agent corpus is unchanged — knowledge pages still reach the assistant', () => {
   it('selectCorpusPages still admits the whole knowledge branch', () => {
     expect(routesOf(selectCorpusPages(siteWithKnowledge().pages, { knowledge: true }))).toEqual([
       '/about',

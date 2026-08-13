@@ -109,13 +109,24 @@ export function isKnowledgeRoute(route, roots) {
  *   rendered and cannot be reached by a visitor, so nothing describing the
  *   *public* site may name it.
  *
- * ⛔ That last one is a disclosure boundary, not a tidy-up, and the mistake it
- * corrects was invisible for a reason worth stating. These projections are the
- * **free** tier; the agent corpus that knowledge pages exist for is the
- * **paid** one. Leaving `knowledge` out of this list did not merely list a
- * page — it published the body an author wrote for a capability they may never
- * have bought, at `llms.txt`, at `/{route}.md`, and in the search index. It
- * also made {@link selectCorpusPages} degenerate: that selector is *public ∪
+ * ⛔ **That last one is about who the prose is ADDRESSED to — it is not a
+ * confidentiality boundary, and reading it as one produces wrong designs.**
+ * A knowledge page is source material for a service the site runs for its
+ * visitors; the explanations in it are written for that service to reason
+ * with, not for a person or a crawler to read. So naming it in `llms.txt`,
+ * `/{route}.md` or the search index is not "exposing a secret" — it is
+ * serving a reader prose that was written for somebody else, in a file that
+ * claims to describe the public site.
+ *
+ * ⚠️ **Do not build a security expectation on this.** The service can quote
+ * its source material back to whoever prompts it — that is what it is for —
+ * so knowledge content is reachable by a visitor through the service by
+ * design. [Diego, 2026-08-13]: *"It is not the case that it's private in the
+ * sense of sensitive. It is given to the agent so they can reason and respond
+ * prompts."*
+ *
+ * The omission still mattered, just not for the reason first written here: it
+ * also made {@link selectCorpusPages} degenerate. That selector is *public ∪
  * knowledge*, and while knowledge rode in the public half the union added
  * nothing and read as if it worked.
  *
