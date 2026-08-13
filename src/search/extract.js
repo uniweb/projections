@@ -1,14 +1,15 @@
 /**
  * Extract searchable content from site-content.json
  *
- * Walks through all pages and sections, extracting text content
- * for search indexing. Reuses patterns from i18n extraction.
+ * Walks the pages a *visitor* can reach — {@link selectIndexablePages} decides
+ * which those are — and extracts their text for search indexing.
  */
 
 // Leaf subpath, not the bare `@uniweb/core` entry: this package's environment
 // contract forbids the package root (it pulls semantic-parser + theming).
 // Enforced by tests/environment.test.js.
 import { sectionDomId } from '@uniweb/core/section-id'
+import { selectIndexablePages } from '../pages.js'
 
 /**
  * Extract all searchable content from site
@@ -20,7 +21,8 @@ import { sectionDomId } from '@uniweb/core/section-id'
  * @param {boolean} [options.paragraphs=true] - Include paragraphs
  * @param {boolean} [options.links=true] - Include link labels
  * @param {boolean} [options.lists=true] - Include list items
- * @param {Array<string>} [options.excludeRoutes=[]] - Routes to exclude
+ * @param {Array<string>} [options.excludeRoutes=[]] - Route prefixes to
+ *   exclude; the whole branch goes, matching `agents.exclude`
  * @param {Array<string>} [options.excludeComponents=[]] - Components to exclude
  * @returns {Array<Object>} Array of search entries
  */
@@ -38,19 +40,20 @@ export function extractSearchContent(siteContent, options = {}) {
 
   const entries = []
 
-  for (const page of siteContent.pages || []) {
-    const pageRoute = page.route || '/'
-
-    // Skip excluded routes
-    if (excludeRoutes.some(r => pageRoute.startsWith(r))) {
-      continue
-    }
-
-    // Skip pages marked as noindex
-    if (page.seo?.noindex) {
-      continue
-    }
-
+  // Which pages may be described is `pages.js`'s decision, not this file's.
+  //
+  // ⛔ This used to be two inline `continue`s — `search.exclude.routes` and
+  // `seo.noindex` — and the gap between that pair and the shared selector was a
+  // disclosure. A search index is a *visitor-facing* artifact, so it must
+  // describe only pages a visitor can reach; `knowledge:` pages are not
+  // rendered at all, and drafts, `hidden` pages and dynamic route *templates*
+  // are each unreachable or unlinkable in their own way. Reimplementing that
+  // list here is how it drifts from the one `llms.txt` and the per-page
+  // markdown use, which is exactly what happened.
+  //
+  // Note this also fixes the prefix test: `excludeRoutes` was matched with
+  // `startsWith`, so excluding `/kb` silently excluded `/kbase` too.
+  for (const page of selectIndexablePages(siteContent.pages || [], { exclude: excludeRoutes })) {
     // Extract page-level entry
     if (includePagesFlag) {
       const pageEntry = extractFromPage(page)

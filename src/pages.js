@@ -66,9 +66,37 @@ export function isAtOrUnder(route, prefix) {
 }
 
 /**
+ * The routes carrying `knowledge: true` — the roots of the agent-only branches.
+ *
+ * ⚠️ Defined here, in the lower layer, rather than in `corpus.js` where the
+ * concept reads like it belongs. Both files need it and the dependency only
+ * runs one way, so putting it there would mean a second copy of "is this route
+ * inside that branch" — the failure {@link isAtOrUnder} exists to prevent.
+ *
+ * @param {Object[]} pages
+ * @returns {string[]}
+ */
+export function knowledgeRoots(pages = []) {
+  if (!Array.isArray(pages)) return []
+  return pages.filter(page => page?.knowledge && page.route).map(page => page.route)
+}
+
+/**
+ * Is `route` a knowledge route — carrying the flag, or beneath one that does?
+ *
+ * @param {string} route
+ * @param {string[]} roots - {@link knowledgeRoots}
+ * @returns {boolean}
+ */
+export function isKnowledgeRoute(route, roots) {
+  if (!route) return false
+  return roots.some(root => isAtOrUnder(route, root))
+}
+
+/**
  * Route prefixes whose whole branch is excluded.
  *
- * Two sources, with different reach — deliberately:
+ * Three sources, with different reach — deliberately:
  *
  * - `agents.exclude` cascades. `exclude: [/internal]` plainly means the
  *   branch, not one page.
@@ -76,6 +104,20 @@ export function isAtOrUnder(route, prefix) {
  *   pure structure: suppressing the heading while still listing its children
  *   would orphan them under the wrong group. On a page with content it stays
  *   per-page, matching how the sitemap reads `noindex`.
+ * - **`knowledge: true` cascades**, by the same route-prefix rule
+ *   {@link partitionKnowledgePages} renders by. A knowledge page is not
+ *   rendered and cannot be reached by a visitor, so nothing describing the
+ *   *public* site may name it.
+ *
+ * ⛔ That last one is a disclosure boundary, not a tidy-up, and the mistake it
+ * corrects was invisible for a reason worth stating. These projections are the
+ * **free** tier; the agent corpus that knowledge pages exist for is the
+ * **paid** one. Leaving `knowledge` out of this list did not merely list a
+ * page — it published the body an author wrote for a capability they may never
+ * have bought, at `llms.txt`, at `/{route}.md`, and in the search index. It
+ * also made {@link selectCorpusPages} degenerate: that selector is *public ∪
+ * knowledge*, and while knowledge rode in the public half the union added
+ * nothing and read as if it worked.
  *
  * @param {Object[]} pages
  * @param {string[]} exclude
@@ -87,7 +129,7 @@ function excludedBranches(pages, exclude) {
     if (!isContainer(page)) continue
     if (page.seo?.noindex || page.hidden) branches.push(page.route)
   }
-  return branches
+  return branches.concat(knowledgeRoots(pages))
 }
 
 /**

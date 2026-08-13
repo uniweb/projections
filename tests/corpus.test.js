@@ -43,37 +43,37 @@ describe('selectCorpusPages — what the agent may see', () => {
   it('⛔ excludes a noindex page: the corpus is NOT the site\'s full content', () => {
     const pages = [page('/'), page('/private', { seo: { noindex: true } })]
 
-    expect(routesOf(selectCorpusPages(pages))).toEqual(['/'])
+    expect(routesOf(selectCorpusPages(pages, { knowledge: true }))).toEqual(['/'])
   })
 
   it('⛔ excludes a hidden page for the same reason', () => {
     const pages = [page('/'), page('/draft', { hidden: true })]
 
-    expect(routesOf(selectCorpusPages(pages))).toEqual(['/'])
+    expect(routesOf(selectCorpusPages(pages, { knowledge: true }))).toEqual(['/'])
   })
 
   it('adds knowledge pages on top of the public selection', () => {
     const pages = [page('/'), page('/kb', { knowledge: true, hidden: true })]
 
-    expect(routesOf(selectCorpusPages(pages))).toEqual(['/', '/kb'])
+    expect(routesOf(selectCorpusPages(pages, { knowledge: true }))).toEqual(['/', '/kb'])
   })
 
   it('a knowledge page overrides hidden AND noindex — otherwise knowledge: does nothing', () => {
     const pages = [page('/kb', { knowledge: true, hidden: true, seo: { noindex: true } })]
 
-    expect(routesOf(selectCorpusPages(pages))).toEqual(['/kb'])
+    expect(routesOf(selectCorpusPages(pages, { knowledge: true }))).toEqual(['/kb'])
   })
 
   it('⛔ FAILS CLOSED: agents.exclude outranks a conflicting knowledge: true', () => {
     const pages = [page('/'), page('/internal/notes', { knowledge: true })]
 
-    expect(routesOf(selectCorpusPages(pages, { exclude: ['/internal'] }))).toEqual(['/'])
+    expect(routesOf(selectCorpusPages(pages, { exclude: ['/internal'], knowledge: true }))).toEqual(['/'])
   })
 
   it('⛔ FAILS CLOSED: a _-prefixed route stays out even when marked knowledge', () => {
     const pages = [page('/'), page('/_scratch', { knowledge: true })]
 
-    expect(routesOf(selectCorpusPages(pages))).toEqual(['/'])
+    expect(routesOf(selectCorpusPages(pages, { knowledge: true }))).toEqual(['/'])
   })
 
   it('excludes containers and dynamic templates — shape, not policy', () => {
@@ -83,13 +83,13 @@ describe('selectCorpusPages — what the agent may see', () => {
       page('/blog/:slug', { isDynamic: true, knowledge: true }),
     ]
 
-    expect(routesOf(selectCorpusPages(pages))).toEqual(['/'])
+    expect(routesOf(selectCorpusPages(pages, { knowledge: true }))).toEqual(['/'])
   })
 
   it('returns build order and never duplicates a page selected by both routes', () => {
     const pages = [page('/a'), page('/b', { knowledge: true }), page('/c')]
 
-    expect(routesOf(selectCorpusPages(pages))).toEqual(['/a', '/b', '/c'])
+    expect(routesOf(selectCorpusPages(pages, { knowledge: true }))).toEqual(['/a', '/b', '/c'])
   })
 })
 
@@ -188,7 +188,7 @@ describe('buildCorpus', () => {
       page('/', { sections: [section('# Home', { id: 1 })] }),
       page('/kb', { knowledge: true, hidden: true, sections: [section('# KB', { id: 2 })] }),
     ])
-    const corpus = buildCorpus(content)
+    const corpus = buildCorpus(content, { knowledge: true })
 
     expect(corpus.find(p => p.route === '/').knowledge).toBe(false)
     expect(corpus.find(p => p.route === '/kb').knowledge).toBe(true)

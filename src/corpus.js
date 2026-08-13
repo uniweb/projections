@@ -44,6 +44,8 @@ import {
   isDynamicTemplate,
   hasDraftSegment,
   isAtOrUnder,
+  knowledgeRoots,
+  isKnowledgeRoute,
 } from './pages.js'
 import { normalizeExclude } from './config.js'
 
@@ -64,13 +66,13 @@ import { normalizeExclude } from './config.js'
 export function partitionKnowledgePages(pages = []) {
   if (!Array.isArray(pages)) return { knowledgePages: [], renderedPages: [] }
 
-  const knowledgeRoots = pages.filter(page => page?.knowledge).map(page => page.route)
+  const roots = knowledgeRoots(pages)
 
   const knowledgePages = []
   const renderedPages = []
 
   for (const page of pages) {
-    if (isKnowledgePage(page, knowledgeRoots)) knowledgePages.push(page)
+    if (isKnowledgePage(page, roots)) knowledgePages.push(page)
     else renderedPages.push(page)
   }
 
@@ -79,20 +81,28 @@ export function partitionKnowledgePages(pages = []) {
 
 /**
  * @param {Object} page
- * @param {string[]} knowledgeRoots - Routes carrying `knowledge: true`
+ * @param {string[]} roots - Routes carrying `knowledge: true`
  * @returns {boolean}
  */
-function isKnowledgePage(page, knowledgeRoots) {
+function isKnowledgePage(page, roots) {
+  // The flag is checked first rather than folded into the route test: a page
+  // carrying it with no route at all is still not something to render.
   if (page?.knowledge) return true
-  const route = page?.route
-  if (!route) return false
-  return knowledgeRoots.some(root => route !== root && isAtOrUnder(route, root))
+  return isKnowledgeRoute(page?.route, roots)
 }
 
 /**
- * The pages the agent corpus may contain.
+ * The pages a corpus may contain — **public by default; agent-only on request.**
  *
- * ⛔ **THIS IS NOT "the site's full content", AND THE DIFFERENCE IS A LEAK.**
+ * ⛔ **THE ARGUMENT ORDER IS THE SAFETY PROPERTY. Passing nothing gets you the
+ * PUBLIC selection.** A caller who forgets the option, or copies a call from a
+ * public-tier consumer, under-discloses. That is the failure we can afford;
+ * the other direction puts agent-only content on a visitor-facing endpoint.
+ * So `knowledge` defaults to `false` and the agent corpus is the one that has
+ * to ask — the two tiers must not merely pass different arguments to one
+ * selector, the public one must be what you get by passing none.
+ *
+ * ⛔ **AND EVEN WITH `knowledge: true`, THIS IS NOT "the site's full content".**
  * It is tempting to index every page — the agent is more useful the more it
  * knows — and to treat `knowledge: true` as purely a render-subtraction. That
  * is defensible for a private tool an author runs over their own content, and
@@ -102,8 +112,8 @@ function isKnowledgePage(page, knowledgeRoots) {
  * follows from: projections are on by default, so weakening the exclusions
  * turns the default into a leak.
  *
- * So the corpus is the public projection **plus** what the author explicitly
- * marked for agents:
+ * With `knowledge: true` the corpus is the public projection **plus** what the
+ * author explicitly marked for agents:
  *
  * | signal | reach | why |
  * |---|---|---|
@@ -119,13 +129,25 @@ function isKnowledgePage(page, knowledgeRoots) {
  * agent knows less; the cost of ignoring it is private content on a public
  * endpoint. Those are not symmetric.
  *
+ * ⚠️ **The `added` row is load-bearing and was not always doing anything.**
+ * Until `excludedBranches` learned about `knowledge:`, the public half already
+ * contained knowledge pages, so this union was a no-op and every test of it
+ * passed for the wrong reason. That is the shape to watch for when reading a
+ * union: it looks correct whether or not the two halves are actually disjoint.
+ * `corpus.test.js` now pins the public half's *absence* of them directly.
+ *
  * @param {Object[]} pages - `siteContent.pages`
  * @param {Object} [options]
  * @param {string[]} [options.exclude] - Additional excluded route prefixes
+ * @param {boolean} [options.knowledge=false] - Admit `knowledge:` pages. Off by
+ *   default; see the argument-order note above before changing that.
  * @returns {Object[]} Pages in build order, no duplicates
  */
-export function selectCorpusPages(pages = [], { exclude = [] } = {}) {
-  const publicSet = new Set(selectIndexablePages(pages, { exclude }))
+export function selectCorpusPages(pages = [], { exclude = [], knowledge = false } = {}) {
+  const publicPages = selectIndexablePages(pages, { exclude })
+  if (!knowledge) return publicPages
+
+  const publicSet = new Set(publicPages)
   const branches = normalizeExclude(exclude)
   const { knowledgePages } = partitionKnowledgePages(pages)
 
@@ -147,27 +169,36 @@ export function selectCorpusPages(pages = [], { exclude = [] } = {}) {
 /**
  * Build the greppable corpus for one locale of a site.
  *
+ * **Public by default.** `knowledge: true` is the agent tier and has to be
+ * asked for — see the argument-order note on {@link selectCorpusPages}.
+ *
  * @param {Object} siteContent - Parsed site-content.json (one locale)
  * @param {Object} [options]
  * @param {string[]} [options.exclude] - Additional excluded route prefixes
  * @param {boolean} [options.includeChildren=true] - Include nested sections
+ * @param {boolean} [options.knowledge=false] - Admit `knowledge:` pages
  * @returns {Array<CorpusPage>} Pages with content, in build order
  */
-export function buildCorpus(siteContent, { exclude, includeChildren = true } = {}) {
+export function buildCorpus(
+  siteContent,
+  { exclude, includeChildren = true, knowledge = false } = {}
+) {
   const pages = siteContent?.pages || []
   const config = siteContent?.config || {}
   const excluded = exclude ?? config.agents?.exclude ?? []
 
-  const knowledgeRoutes = new Set(
-    partitionKnowledgePages(pages).knowledgePages.map(page => page.route)
-  )
+  // Only meaningful when knowledge pages were admitted; an empty set otherwise
+  // keeps every `CorpusPage.knowledge` false, which is the truth on that tier.
+  const agentOnly = knowledge
+    ? new Set(partitionKnowledgePages(pages).knowledgePages.map(page => page.route))
+    : new Set()
 
   const corpus = []
 
-  for (const page of selectCorpusPages(pages, { exclude: excluded })) {
+  for (const page of selectCorpusPages(pages, { exclude: excluded, knowledge })) {
     const built = buildCorpusPage(page, {
       includeChildren,
-      knowledge: knowledgeRoutes.has(page.route),
+      knowledge: agentOnly.has(page.route),
     })
     // A page whose sections carry no projectable content is not a page the
     // agent can read. Listing it would produce read_page hits that return ''.
