@@ -82,3 +82,87 @@ describe('the link — the record’s own route wins', () => {
     expect(JSON.stringify(index)).not.toContain('undefined')
   })
 })
+
+/**
+ * ⛔ The two schema claims this function used to make, both removed 2026-08-25.
+ *
+ * The suite above passes identically before and after that change, because
+ * every case in it declares `search: { fields: ['title'] }` and asserts only
+ * `id` and `route`. A green run there says nothing about either default —
+ * which is why these exist and why each has a control that would fail under
+ * the old behaviour.
+ */
+describe('no schema claims — a collection that is not a blog', () => {
+  // A `people` collection: no `title` anywhere, and fields no blog has.
+  const person = {
+    slug: 'a-okafor',
+    name: 'Ada Okafor',
+    department: 'Biology',
+    tenured: true,
+    route: '/staff/a-okafor',
+  }
+
+  test('CONTROL: with no declared fields, a record without `title` is still searchable', () => {
+    // ⛔ Under the old `|| ['title']` default this was `content: ''` — the
+    // record entered the index and matched nothing. Present, countable, silent.
+    const index = generateCollectionIndex('staff', {}, [person], 'en')
+    const entry = index.entries[0]
+
+    expect(entry.content).toContain('Ada Okafor')
+    expect(entry.content).toContain('Biology')
+  })
+
+  test('wiring keys we authored are not indexed as content', () => {
+    const entry = generateCollectionIndex('staff', {}, [person], 'en').entries[0]
+
+    expect(entry.content).not.toContain('a-okafor')
+    expect(entry.content).not.toContain('/staff/')
+  })
+
+  test('an authored `search.fields` still wins over the default', () => {
+    const cfg = { search: { fields: ['department'] } }
+    const entry = generateCollectionIndex('staff', cfg, [person], 'en').entries[0]
+
+    expect(entry.content).toBe('Biology')
+    expect(entry.content).not.toContain('Ada Okafor')
+  })
+
+  test("CONTROL: `item` keeps the author's own fields", () => {
+    // ⛔ `pickDisplayFields` used to destructure a fixed blog shape, so
+    // `department` and `tenured` were dropped from every result card.
+    const entry = generateCollectionIndex('staff', {}, [person], 'en').entries[0]
+
+    expect(entry.item.department).toBe('Biology')
+    expect(entry.item.tenured).toBe(true)
+    expect(entry.item.name).toBe('Ada Okafor')
+  })
+
+  test('`item` drops our wiring keys, structure, and long text', () => {
+    const heavy = {
+      slug: 'x',
+      route: '/x',
+      label: 'Short label',
+      body: 'y'.repeat(500),
+      content: { type: 'doc', content: [] },
+      tags: ['a', 'b'],
+    }
+    const entry = generateCollectionIndex('things', {}, [heavy], 'en').entries[0]
+
+    expect(entry.item.label).toBe('Short label')
+    expect(entry.item).not.toHaveProperty('slug') // ours
+    expect(entry.item).not.toHaveProperty('route') // ours
+    expect(entry.item).not.toHaveProperty('content') // structure a card cannot render
+    expect(entry.item).not.toHaveProperty('tags') // ditto
+    expect(entry.item).not.toHaveProperty('body') // already in content/excerpt
+  })
+
+  test('a long field is still SEARCHABLE even though it is not displayed', () => {
+    // The cap is a display-payload decision, not an indexing one — dropping it
+    // from both would make long-form records unfindable.
+    const heavy = { slug: 'x', body: 'needle '.repeat(80) }
+    const entry = generateCollectionIndex('things', {}, [heavy], 'en').entries[0]
+
+    expect(entry.content).toContain('needle')
+    expect(entry.item).not.toHaveProperty('body')
+  })
+})
