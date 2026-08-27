@@ -43,4 +43,4 @@ export {
   getSearchIndexFilename
 } from './generate.js'
 
-export { generateCollectionIndex } from './collections.js'
+export { generateRecordSearchIndex } from './records.js'

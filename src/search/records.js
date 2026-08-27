@@ -63,7 +63,29 @@ const isPrimitive = (v) =>
  */
 const DISPLAY_VALUE_MAX = 200
 
-export function generateCollectionIndex(name, config, collectionData, locale) {
+/**
+ * Search-index entries for one named group of records.
+ *
+ * ⛔ RENAMED from `generateCollectionIndex` — 2026-08-27, and the old name was
+ * wrong in two ways that mattered.
+ *
+ * 1. **"Collection" is FRAMEWORK'S build concept** — a named set our build
+ *    compiles to one file. The live lane has no such thing: a host calls this
+ *    with records it fetched from a folder, so the name put our build
+ *    vocabulary into a function whose main caller is a host. `record` is true on
+ *    both lanes and is what the argument actually holds.
+ * 2. **It never said `search`** — every sibling here does (`generateSearchIndex`,
+ *    `mergeSearchIndexes`, `extractSearchContent`), and "collection index" reads
+ *    as an index OF collections or a collection's own listing. It is neither: it
+ *    is a search index derived FROM records.
+ *
+ * ⚠️ The RESULT still carries the old vocabulary — `type: 'collection'`,
+ * `collection: name`, and `id: "collection:<name>:<slug>"`. That is a data shape
+ * with live consumers (`kit`'s endpoint search provider and hosting's search both
+ * read `entry.collection`), so it is a separate, larger decision than this rename
+ * and is deliberately NOT bundled into it.
+ */
+export function generateRecordSearchIndex(name, config, collectionData, locale) {
   // ⛔ NO DEFAULT FIELD LIST. This was `|| ['title']` — a claim about someone
   // else's schema, and wrong for any collection without a `title` (a `people`
   // collection has `name`, a `products` one has `label`). The failure was

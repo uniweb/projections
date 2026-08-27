@@ -29,7 +29,7 @@
 
 import { renderSiteIndex } from '../src/site-index.js'
 import { renderPageMarkdown } from '../src/markdown.js'
-import { generateSearchIndex, generateCollectionIndex, mergeSearchIndexes, getSearchIndexFilename } from '../src/search/index.js'
+import { generateSearchIndex, generateRecordSearchIndex, mergeSearchIndexes, getSearchIndexFilename } from '../src/search/index.js'
 import { page, container, section, site } from './helpers.js'
 
 const fixture = () =>
@@ -99,10 +99,10 @@ describe('no ambient input', () => {
     const config = { route: '/blog', search: { fields: ['title'] } }
     const data = { items: [{ slug: 'a', title: 'Alpha' }] }
 
-    const index = generateCollectionIndex('posts', config, data, 'en')
+    const index = generateRecordSearchIndex('posts', config, data, 'en')
     expect(index.generated).toBeUndefined()
 
-    expect(index).toEqual(generateCollectionIndex('posts', config, data, 'en'))
+    expect(index).toEqual(generateRecordSearchIndex('posts', config, data, 'en'))
   })
 })
 

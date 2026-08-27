@@ -157,6 +157,6 @@ describe('the entry points actually load', () => {
     const mod = await import('../src/search/index.js')
     expect(typeof mod.generateSearchIndex).toBe('function')
     expect(typeof mod.extractSearchContent).toBe('function')
-    expect(typeof mod.generateCollectionIndex).toBe('function')
+    expect(typeof mod.generateRecordSearchIndex).toBe('function')
   })
 })

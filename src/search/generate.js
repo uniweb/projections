@@ -85,7 +85,7 @@ export function generateSearchIndex(siteContent, options = {}) {
  * describe *where the index lives* — only whether it serves queries.
  *
  * @param {Object} pagesIndex - Result of {@link generateSearchIndex}
- * @param {Object[]} [collectionIndexes] - Results of `generateCollectionIndex`
+ * @param {Object[]} [collectionIndexes] - Results of `generateRecordSearchIndex`
  * @returns {Object} One index carrying every entry
  */
 export function mergeSearchIndexes(pagesIndex, collectionIndexes = []) {

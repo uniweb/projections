@@ -1,5 +1,5 @@
 /**
- * `generateCollectionIndex` — the entries behind a dynamic route.
+ * `generateRecordSearchIndex` — the entries behind a dynamic route.
  *
  * The function was exported, re-exported by `@uniweb/build`, and never called
  * by either lane, so nothing had ever fed it the shape the build actually
@@ -19,7 +19,7 @@
  */
 
 import { describe, test, expect } from 'vitest'
-import { generateCollectionIndex } from '../src/search/collections.js'
+import { generateRecordSearchIndex } from '../src/search/records.js'
 
 const config = { route: '/blog', search: { fields: ['title'] } }
 
@@ -32,25 +32,25 @@ const emitted = [
 
 describe('the cascade shape the build actually writes', () => {
   test('reads a bare array — the emitted form', () => {
-    const index = generateCollectionIndex('articles', config, emitted, 'en')
+    const index = generateRecordSearchIndex('articles', config, emitted, 'en')
     expect(index.entries).toHaveLength(2)
     expect(index.entries[0].id).toBe('collection:articles:my-post')
   })
 
   test('still reads an { items } envelope, for a host that carries one', () => {
-    const index = generateCollectionIndex('articles', config, { items: emitted }, 'en')
+    const index = generateRecordSearchIndex('articles', config, { items: emitted }, 'en')
     expect(index.entries).toHaveLength(2)
   })
 
   test('an empty or absent collection yields no entries, not a throw', () => {
-    expect(generateCollectionIndex('articles', config, [], 'en').entries).toEqual([])
-    expect(generateCollectionIndex('articles', config, null, 'en').entries).toEqual([])
+    expect(generateRecordSearchIndex('articles', config, [], 'en').entries).toEqual([])
+    expect(generateRecordSearchIndex('articles', config, null, 'en').entries).toEqual([])
   })
 })
 
 describe('the link — the record’s own route wins', () => {
   test('uses item.route when the build stamped one', () => {
-    const index = generateCollectionIndex('articles', config, emitted, 'en')
+    const index = generateRecordSearchIndex('articles', config, emitted, 'en')
     expect(index.entries.map(e => e.route)).toEqual(['/blog/my-post', '/blog/other'])
   })
 
@@ -58,18 +58,18 @@ describe('the link — the record’s own route wins', () => {
   // strips the trailing slash, so composing here without stripping disagrees.
   test('never disagrees with the build over a trailing slash', () => {
     const withSlash = { ...config, route: '/blog/' }
-    const index = generateCollectionIndex('articles', withSlash, emitted, 'en')
+    const index = generateRecordSearchIndex('articles', withSlash, emitted, 'en')
     expect(index.entries[0].route).toBe('/blog/my-post')
 
     // And when the record carries no route, the fallback normalizes the same way.
     const bare = [{ slug: 'my-post', title: 'My Post' }]
-    const composed = generateCollectionIndex('articles', withSlash, bare, 'en')
+    const composed = generateRecordSearchIndex('articles', withSlash, bare, 'en')
     expect(composed.entries[0].route).toBe('/blog/my-post')
   })
 
   test('composes from config.route for records that arrived without one', () => {
     const bare = [{ slug: 'my-post', title: 'My Post' }]
-    const index = generateCollectionIndex('articles', config, bare, 'en')
+    const index = generateRecordSearchIndex('articles', config, bare, 'en')
     expect(index.entries[0].route).toBe('/blog/my-post')
   })
 
@@ -77,7 +77,7 @@ describe('the link — the record’s own route wins', () => {
   // correctly, looks plausible in results, and 404s on click.
   test('omits route entirely when neither source can supply one', () => {
     const bare = [{ slug: 'my-post', title: 'My Post' }]
-    const index = generateCollectionIndex('articles', { search: {} }, bare, 'en')
+    const index = generateRecordSearchIndex('articles', { search: {} }, bare, 'en')
     expect(index.entries[0]).not.toHaveProperty('route')
     expect(JSON.stringify(index)).not.toContain('undefined')
   })
@@ -105,7 +105,7 @@ describe('no schema claims — a collection that is not a blog', () => {
   test('CONTROL: with no declared fields, a record without `title` is still searchable', () => {
     // ⛔ Under the old `|| ['title']` default this was `content: ''` — the
     // record entered the index and matched nothing. Present, countable, silent.
-    const index = generateCollectionIndex('staff', {}, [person], 'en')
+    const index = generateRecordSearchIndex('staff', {}, [person], 'en')
     const entry = index.entries[0]
 
     expect(entry.content).toContain('Ada Okafor')
@@ -113,7 +113,7 @@ describe('no schema claims — a collection that is not a blog', () => {
   })
 
   test('wiring keys we authored are not indexed as content', () => {
-    const entry = generateCollectionIndex('staff', {}, [person], 'en').entries[0]
+    const entry = generateRecordSearchIndex('staff', {}, [person], 'en').entries[0]
 
     expect(entry.content).not.toContain('a-okafor')
     expect(entry.content).not.toContain('/staff/')
@@ -121,7 +121,7 @@ describe('no schema claims — a collection that is not a blog', () => {
 
   test('an authored `search.fields` still wins over the default', () => {
     const cfg = { search: { fields: ['department'] } }
-    const entry = generateCollectionIndex('staff', cfg, [person], 'en').entries[0]
+    const entry = generateRecordSearchIndex('staff', cfg, [person], 'en').entries[0]
 
     expect(entry.content).toBe('Biology')
     expect(entry.content).not.toContain('Ada Okafor')
@@ -130,7 +130,7 @@ describe('no schema claims — a collection that is not a blog', () => {
   test("CONTROL: `item` keeps the author's own fields", () => {
     // ⛔ `pickDisplayFields` used to destructure a fixed blog shape, so
     // `department` and `tenured` were dropped from every result card.
-    const entry = generateCollectionIndex('staff', {}, [person], 'en').entries[0]
+    const entry = generateRecordSearchIndex('staff', {}, [person], 'en').entries[0]
 
     expect(entry.item.department).toBe('Biology')
     expect(entry.item.tenured).toBe(true)
@@ -146,7 +146,7 @@ describe('no schema claims — a collection that is not a blog', () => {
       content: { type: 'doc', content: [] },
       tags: ['a', 'b'],
     }
-    const entry = generateCollectionIndex('things', {}, [heavy], 'en').entries[0]
+    const entry = generateRecordSearchIndex('things', {}, [heavy], 'en').entries[0]
 
     expect(entry.item.label).toBe('Short label')
     expect(entry.item).not.toHaveProperty('slug') // ours
@@ -160,7 +160,7 @@ describe('no schema claims — a collection that is not a blog', () => {
     // The cap is a display-payload decision, not an indexing one — dropping it
     // from both would make long-form records unfindable.
     const heavy = { slug: 'x', body: 'needle '.repeat(80) }
-    const entry = generateCollectionIndex('things', {}, [heavy], 'en').entries[0]
+    const entry = generateRecordSearchIndex('things', {}, [heavy], 'en').entries[0]
 
     expect(entry.content).toContain('needle')
     expect(entry.item).not.toHaveProperty('body')

@@ -57,7 +57,7 @@ export {
   extractSearchContent,
   generateSearchIndex,
   mergeSearchIndexes,
-  generateCollectionIndex,
+  generateRecordSearchIndex,
   isSearchEnabled,
   getSearchConfig,
   getSearchIndexFilename,
