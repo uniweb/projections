@@ -34,7 +34,7 @@ describe('the cascade shape the build actually writes', () => {
   test('reads a bare array — the emitted form', () => {
     const index = generateRecordSearchIndex('articles', config, emitted, 'en')
     expect(index.entries).toHaveLength(2)
-    expect(index.entries[0].id).toBe('collection:articles:my-post')
+    expect(index.entries[0].id).toBe('record:articles:my-post')
   })
 
   test('still reads an { items } envelope, for a host that carries one', () => {

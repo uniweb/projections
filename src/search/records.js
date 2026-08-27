@@ -79,11 +79,12 @@ const DISPLAY_VALUE_MAX = 200
  *    as an index OF collections or a collection's own listing. It is neither: it
  *    is a search index derived FROM records.
  *
- * ⚠️ The RESULT still carries the old vocabulary — `type: 'collection'`,
- * `collection: name`, and `id: "collection:<name>:<slug>"`. That is a data shape
- * with live consumers (`kit`'s endpoint search provider and hosting's search both
- * read `entry.collection`), so it is a separate, larger decision than this rename
- * and is deliberately NOT bundled into it.
+ * ✅ The RESULT was renamed to match, 2026-08-27 — `type: 'record'`, `group: name`,
+ * `id: "record:<group>:<slug>"`. That was a real data break against two live
+ * consumers (kit's endpoint search provider and hosting's search), taken
+ * deliberately rather than left to rot: doing it while the shape was already
+ * being discussed cost one coordinated change; leaving it would have made the
+ * entry the last place `collection` survived as a lane-crossing word.
  */
 export function generateRecordSearchIndex(name, config, collectionData, locale) {
   // ⛔ NO DEFAULT FIELD LIST. This was `|| ['title']` — a claim about someone
@@ -113,9 +114,18 @@ export function generateRecordSearchIndex(name, config, collectionData, locale) 
     // correctly, looks plausible, and 404s on click.
     const route = item.route || composeRoute(config.route, slug)
     return {
-      id: `collection:${name}:${slug}`,
-      type: 'collection',
-      collection: name,
+      // ⛔ RENAMED 2026-08-27 — `collection` is FRAMEWORK'S build concept (a named
+      // set our build compiles to one file) and the live lane has no such thing:
+      // a host calls this with records fetched from a folder. Same category error
+      // the function name carried until it became `generateRecordSearchIndex`.
+      //
+      // ⭐ `record` is symmetric with the page entry's `type: 'page'` / `id:
+      // "page:<route>"`, and true on both lanes. `group` names what a result UI
+      // actually does with it — label or group results by the set they came from —
+      // without borrowing either lane's word for that set.
+      id: `record:${name}:${slug}`,
+      type: 'record',
+      group: name,
       ...(route ? { route } : {}),
       title: item.title || item.name || slug,
       content,
@@ -130,8 +140,8 @@ export function generateRecordSearchIndex(name, config, collectionData, locale) 
   // No `generated` timestamp — see the note in `generate.js`. A clock defeats
   // content-addressing and byte-parity between publishers.
   return {
-    type: 'collection',
-    collection: name,
+    type: 'record',
+    group: name,
     locale,
     entries,
   }
