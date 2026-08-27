@@ -127,8 +127,14 @@ a third-party convention that may not survive — so it appears exactly once, in
 `config.js`, at the edge. A change of convention costs a constant.
 
 **Search** — also available from the `@uniweb/projections/search` subpath:
-`generateSearchIndex`, `extractSearchContent`, `generateCollectionIndex`,
-`isSearchEnabled`, `getSearchConfig`, `getSearchIndexFilename`.
+`generateSearchIndex`, `extractSearchContent`, `generateRecordSearchIndex`,
+`mergeSearchIndexes`, `isSearchEnabled`, `getSearchConfig`, `getSearchIndexFilename`.
+
+> **Renamed in 0.5.0** — `generateCollectionIndex` is now `generateRecordSearchIndex`, and a
+> search entry carries `type: 'record'` / `group` / `id: "record:<group>:<slug>"` where it
+> carried `type: 'collection'` / `collection` / `id: "collection:…"`. *"Collection" is a
+> build-side concept — a named set compiled to one file — and this function is called with
+> records that may never have been one.*
 
 ```js
 import { generateSearchIndex, isSearchEnabled } from '@uniweb/projections/search'
