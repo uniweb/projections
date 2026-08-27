@@ -235,10 +235,32 @@ function extractFromProseMirrorDoc(doc, options) {
     return { title, textParts }
   }
 
-  for (const node of doc.content) {
+  // ⛔ CONTAINERS WHOSE CHILDREN ARE ORDINARY AUTHOR PROSE. Until 2026-08-27 this
+  // walk was FLAT over `doc.content`, so anything nested one level down was
+  // invisible to search — measured: a blockquote's prose and every table cell were
+  // lost outright, on a site that looked perfectly indexed.
+  //
+  // ⭐ An ALLOWLIST rather than a blind recursion, deliberately: descending into
+  // everything would pull in `codeBlock` and `math_display`, which are not prose —
+  // they inflate the index and match on tokens nobody searches for. Adding a
+  // container here is a decision, not a default.
+  const DESCEND = new Set(['blockquote', 'table', 'tableRow', 'tableCell'])
+
+  const walk = (nodes) => {
+    for (const node of nodes || []) {
+      if (!node) continue
+      if (DESCEND.has(node.type)) {
+        walk(node.content)
+        continue
+      }
+      visit(node)
+    }
+  }
+
+  const visit = (node) => {
     if (node.type === 'heading') {
       const text = extractTextFromNode(node)
-      if (!text) continue
+      if (!text) return
 
       // First H1 becomes the title
       if (!foundFirstHeading && node.attrs?.level === 1) {
@@ -269,8 +291,15 @@ function extractFromProseMirrorDoc(doc, options) {
     } else if ((node.type === 'bulletList' || node.type === 'orderedList') && includeLists) {
       const listTexts = extractFromList(node)
       textParts.push(...listTexts)
+    } else if (node.type === 'image') {
+      // ⭐ `alt` is the author describing their own image — the only words an
+      // image contributes, and what a reader searching for it would type.
+      const alt = typeof node.attrs?.alt === 'string' ? node.attrs.alt.trim() : ''
+      if (alt) textParts.push(alt)
     }
   }
+
+  walk(doc.content)
 
   return { title, textParts }
 }
