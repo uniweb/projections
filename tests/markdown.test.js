@@ -113,3 +113,94 @@ describe('resolvePageDescription', () => {
     expect(resolvePageDescription(page('/x'))).toBe('')
   })
 })
+
+// ─── insets — the author's caption survives, the component never does ────────
+//
+// An inset is `![Platform overview](@Diagram)`: an author's caption plus a
+// FOUNDATION COMPONENT to render it. The build splits them — caption and params
+// into the section's `insets[]`, an `inset_placeholder` left in the body.
+//
+// ⛔ `proseMirrorToMarkdown` has no serializer for that node, so before this it
+// was dropped with a per-build warning and EVERY inset caption was missing from
+// EVERY agent-facing page.
+describe('inset placeholders', () => {
+  const page = (nodes, insets) => ({
+    title: 'Home',
+    route: '/',
+    sections: [{ id: 'hero', content: { type: 'doc', content: nodes }, insets }]
+  })
+  const body = (md) => md.replace(/^---[\s\S]*?---/, '')
+
+  it('renders a block-level inset as its caption', () => {
+    const md = body(
+      renderPageMarkdown(
+        page(
+          [{ type: 'inset_placeholder', attrs: { refId: 'a' } }],
+          [{ refId: 'a', type: 'Diagram', title: 'Platform overview' }]
+        ),
+        {}
+      )
+    )
+    expect(md).toContain('Platform overview')
+  })
+
+  it('renders an inline inset inside its sentence', () => {
+    // ⛔ Block vs inline is not cosmetic: a bare text node at block level is not
+    // serializable, so an unconditional text replacement restores NOTHING while
+    // removing the warning that announced the loss. That was the first version.
+    const md = body(
+      renderPageMarkdown(
+        page(
+          [
+            {
+              type: 'paragraph',
+              content: [
+                { type: 'text', text: 'See ' },
+                { type: 'inset_placeholder', attrs: { refId: 'b' } },
+                { type: 'text', text: ' here.' }
+              ]
+            }
+          ],
+          [{ refId: 'b', type: 'Cite', title: 'Smith 2024' }]
+        ),
+        {}
+      )
+    )
+    expect(md).toMatch(/See Smith 2024 here\./)
+  })
+
+  it('⛔ CONTROL — the foundation component NEVER reaches the output', () => {
+    // The property this whole package rests on: a projection is of the SITE and
+    // is identical under a swapped foundation. A component name is a rendering
+    // assignment and must not leak, the same reason `type:` and params do not.
+    const md = body(
+      renderPageMarkdown(
+        page(
+          [{ type: 'inset_placeholder', attrs: { refId: 'a' } }],
+          [{ refId: 'a', type: 'Diagram', title: 'Platform overview', params: { depth: 2 } }]
+        ),
+        {}
+      )
+    )
+    expect(md).not.toMatch(/Diagram|depth|@/)
+  })
+
+  it('drops an inset with no caption, and says nothing about it', () => {
+    // No caption means no author text — there is nothing a reader is missing, so
+    // a warning here would be noise on every build of a perfectly fine site.
+    const md = body(
+      renderPageMarkdown(
+        page(
+          [
+            { type: 'paragraph', content: [{ type: 'text', text: 'Copy.' }] },
+            { type: 'inset_placeholder', attrs: { refId: 'c' } }
+          ],
+          [{ refId: 'c', type: 'Diagram', title: null }]
+        ),
+        {}
+      )
+    )
+    expect(md).toContain('Copy.')
+    expect(md).not.toMatch(/inset|refId/)
+  })
+})
