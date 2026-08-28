@@ -10,6 +10,7 @@
 // Enforced by tests/environment.test.js.
 import { sectionDomId } from '@uniweb/core/section-id'
 import { selectIndexablePages } from '../pages.js'
+import { resolveInsetCaptions } from '../insets.js'
 
 /**
  * Extract all searchable content from site
@@ -165,7 +166,25 @@ function extractFromSection(section, page, options, ancestorAnchor) {
   let sectionTitle = ''
 
   if (section.content?.type === 'doc') {
-    const extracted = extractFromProseMirrorDoc(section.content, {
+    // ⭐ RESOLVE INSET CAPTIONS FIRST, with the SAME function the markdown
+    // projection uses. An inset is `![Platform overview](@Diagram)`: the build
+    // moves the author's caption into `insets[]` and leaves an
+    // `inset_placeholder` behind, so a walk of the body alone never sees it.
+    //
+    // ⛔ Both positions were losing text, and the INLINE one was losing it in the
+    // worse direction: a placeholder mid-sentence contributed nothing, so
+    // "See <inset> for detail." was indexed as "See  for detail." — mangled
+    // prose rather than an obvious hole, and a search for the caption's words
+    // found a page whose markdown projection plainly contained them.
+    //
+    // Resolving up front rather than teaching the walkers about the node keeps
+    // ONE implementation of "a caption is content, a component name is not" —
+    // the property this whole package rests on. It also makes both positions
+    // work for free: a block placeholder becomes a paragraph, an inline one a
+    // text node, and the existing walk already handles both.
+    const content = resolveInsetCaptions(section.content, section.insets)
+
+    const extracted = extractFromProseMirrorDoc(content, {
       includeHeadings,
       includeParagraphs,
       includeLinks,

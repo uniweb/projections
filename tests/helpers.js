@@ -54,3 +54,51 @@ export function container(route, title) {
 export function site(pages, config = {}) {
   return { config: { name: 'Test Site', ...config }, pages }
 }
+
+/**
+ * A section whose insets have been extracted, the way the BUILD does it.
+ *
+ * ⛔ `markdownToProseMirror` alone is not enough here. The reader emits
+ * `inset_ref` (caption in `attrs.alt`, component in `attrs.component`); it is
+ * the build's collector that splits those into an `insets[]` record plus an
+ * `inset_placeholder` in the body — and the placeholder is what a projection
+ * actually receives. A fixture stopping at the reader tests a shape no
+ * projection ever sees.
+ *
+ * ⚠️ This mirrors `@uniweb/build`'s `src/site/content-collector.js` (the
+ * `inset_ref` branch). It is a MIRROR, not the real thing: `projections` must
+ * not depend on `build`, whose identity pulls Vite and would break this
+ * package's environment contract. Re-read that branch if an inset field moves —
+ * the fields copied here are `refId` / `type` / `embedKind` / `params` /
+ * `title`, and the caption rides as `title`.
+ */
+export function sectionWithInsets(markdown, overrides = {}) {
+  const content = markdownToProseMirror(markdown)
+  const insets = []
+  let refIndex = 0
+
+  const visit = (nodes) => {
+    if (!Array.isArray(nodes)) return
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+      if (!node) continue
+      if (node.type === 'inset_ref') {
+        const { component, alt, embedKind, ...params } = node.attrs || {}
+        const refId = `inset_${refIndex++}`
+        insets.push({
+          refId,
+          type: component,
+          embedKind: embedKind || 'visual',
+          params: Object.keys(params).length > 0 ? params : {},
+          title: alt || null
+        })
+        nodes[i] = { type: 'inset_placeholder', attrs: { refId, embedKind: embedKind || 'visual' } }
+        continue
+      }
+      if (Array.isArray(node.content)) visit(node.content)
+    }
+  }
+  visit(content.content)
+
+  return section(null, { ...overrides, content, insets })
+}
