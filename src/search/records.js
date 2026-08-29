@@ -29,7 +29,7 @@ function composeRoute(configRoute, slug) {
 
 /**
  * @param {string} name - Collection name (e.g. "articles")
- * @param {Object} config - Collection config from site.yml (config.collections[name])
+ * @param {Object} config - Query config from the site payload (config.queries[name])
  * @param {Object[]|Object} collectionData - Parsed cascade JSON (`data/{name}.json`),
  *   which the build writes as a bare array. The `{ items: [...] }` envelope is
  *   accepted too, since a host fetching the collection from a backend may carry one.
