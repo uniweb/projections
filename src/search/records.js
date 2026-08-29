@@ -30,7 +30,7 @@ function composeRoute(configRoute, slug) {
 /**
  * @param {string} name - Collection name (e.g. "articles")
  * @param {Object} config - Query config from the site payload (config.queries[name])
- * @param {Object[]|Object} collectionData - Parsed cascade JSON (`data/{name}.json`),
+ * @param {Object[]|Object} recordData - Parsed cascade JSON (`data/{name}.json`),
  *   which the build writes as a bare array. The `{ items: [...] }` envelope is
  *   accepted too, since a host fetching the collection from a backend may carry one.
  * @param {string} locale - Locale code (e.g. "en")
@@ -66,7 +66,7 @@ const DISPLAY_VALUE_MAX = 200
 /**
  * Search-index entries for one named group of records.
  *
- * ⛔ RENAMED from `generateCollectionIndex` — 2026-08-27, and the old name was
+ * ⛔ RENAMED from `generateRecordIndex` — 2026-08-27, and the old name was
  * wrong in two ways that mattered.
  *
  * 1. **"Collection" is FRAMEWORK'S build concept** — a named set our build
@@ -86,7 +86,7 @@ const DISPLAY_VALUE_MAX = 200
  * being discussed cost one coordinated change; leaving it would have made the
  * entry the last place `collection` survived as a lane-crossing word.
  */
-export function generateRecordSearchIndex(name, config, collectionData, locale) {
+export function generateRecordSearchIndex(name, config, recordData, locale) {
   // ⛔ NO DEFAULT FIELD LIST. This was `|| ['title']` — a claim about someone
   // else's schema, and wrong for any collection without a `title` (a `people`
   // collection has `name`, a `products` one has `label`). The failure was
@@ -99,9 +99,9 @@ export function generateRecordSearchIndex(name, config, collectionData, locale) 
   // has told us something we could not otherwise know.
   const declaredFields = Array.isArray(config.search?.fields) ? config.search.fields : null
   const weight = config.search?.weight ?? 0.7
-  const items = Array.isArray(collectionData)
-    ? collectionData
-    : collectionData?.items || []
+  const items = Array.isArray(recordData)
+    ? recordData
+    : recordData?.items || []
 
   const entries = items.map(item => {
     const fields = declaredFields ?? searchableKeys(item)

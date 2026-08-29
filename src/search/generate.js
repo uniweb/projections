@@ -85,13 +85,13 @@ export function generateSearchIndex(siteContent, options = {}) {
  * describe *where the index lives* — only whether it serves queries.
  *
  * @param {Object} pagesIndex - Result of {@link generateSearchIndex}
- * @param {Object[]} [collectionIndexes] - Results of `generateRecordSearchIndex`
+ * @param {Object[]} [recordIndexes] - Results of `generateRecordSearchIndex`
  * @returns {Object} One index carrying every entry
  */
-export function mergeSearchIndexes(pagesIndex, collectionIndexes = []) {
+export function mergeSearchIndexes(pagesIndex, recordIndexes = []) {
   const entries = [
     ...(pagesIndex?.entries || []),
-    ...collectionIndexes.flatMap(index => index?.entries || [])
+    ...recordIndexes.flatMap(index => index?.entries || [])
   ]
 
   return {
