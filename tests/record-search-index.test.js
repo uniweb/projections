@@ -7,7 +7,7 @@
  *
  *   1. The cascade file `data/{name}.json` is written as a BARE ARRAY
  *      (`writeCollectionFiles` → `JSON.stringify(items)`). Reading
- *      `collectionData.items` off it yields `undefined` → an index with zero
+ *      `recordData.items` off it yields `undefined` → an index with zero
  *      entries and no error.
  *   2. Each entry's link was recomputed as `${config.route}/${slug}` while the
  *      build had already stamped `item.route` using its own normalization — so
