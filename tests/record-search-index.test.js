@@ -119,6 +119,44 @@ describe('no schema claims — a collection that is not a blog', () => {
     expect(entry.content).not.toContain('/staff/')
   })
 
+  test('the DEFAULT SELECTS EXACTLY these fields — pinned, not sampled', () => {
+    // ⛔ THE OTHER TESTS HERE CANNOT CATCH A CHANGE TO `searchableKeys`. They assert
+    // `toContain` / `not.toContain`, so widening the selection — or dropping a field
+    // that is not one of the two they name — keeps every one of them green.
+    //
+    // ⭐ Why that matters beyond tidiness: a host calls `generateRecordSearchIndex`
+    // per request at the edge, over live records our build never sees, and keys a
+    // cache on the entry shape. `searchableKeys` moves the VALUE of `content`, not
+    // its shape, so the surface contract's key-path diff cannot see it either
+    // (`_contracts/surface/probes.js` says so at the `.undeclared` probe). This
+    // assertion is the only thing that turns such a change into a red test at OUR
+    // commit — which is what lets us tell that host before they serve stale entries
+    // as current. Change it deliberately, and say so in the commit body.
+    const entry = generateRecordSearchIndex('staff', {}, [person], 'en').entries[0]
+
+    // Exactly the non-empty STRINGS, minus WIRING_KEYS ($uuid, slug, id, route,
+    // image) — so `name` and `department`, in the author's own key order, and
+    // neither `slug` nor `route`. `tenured` is a boolean, absent for a reason that
+    // is not about wiring — hence the separate control below.
+    expect(entry.content).toBe('Ada Okafor Biology')
+
+    // And the same claim stated as a set, so a failure says WHICH field moved
+    // rather than only that a string differs.
+    const selected = Object.keys(person).filter(
+      (k) => typeof person[k] === 'string' && entry.content.includes(person[k])
+    )
+    expect(selected.sort()).toEqual(['department', 'name'])
+  })
+
+  test('CONTROL — a non-string value is not indexed, and that is not a WIRING_KEYS rule', () => {
+    // `tenured: true` is excluded because a boolean is not searchable text, not
+    // because we named it. Conflating the two reasons is how a future edit
+    // "simplifies" one of them away.
+    const entry = generateRecordSearchIndex('staff', {}, [person], 'en').entries[0]
+    expect(entry.content).not.toContain('true')
+    expect(person.tenured).toBe(true)
+  })
+
   test('an authored `search.fields` still wins over the default', () => {
     const cfg = { search: { fields: ['department'] } }
     const entry = generateRecordSearchIndex('staff', cfg, [person], 'en').entries[0]
