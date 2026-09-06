@@ -487,7 +487,12 @@ function selectTop(items, k) {
  * @param {number} [opts.limit] - keep only the best N (0 = all)
  * @param {boolean} [opts.prefix=true] - complete the last term as it is typed
  * @param {boolean} [opts.fuzzy=true] - fall back to near-misses when nothing matched
- * @returns {{hits: Array<{doc:number, score:number, fuzzy?:boolean}>, total:number}}
+ * @returns {{hits: Array<{doc:number, score:number, fuzzy?:boolean}>, total:number,
+ *            corrections?: Array<{term:string, to:string}>}}
+ *   `corrections` is present only when the fuzzy fallback answered — one entry per
+ *   query term it substituted, the commonest candidate for each — so a caller can
+ *   render *"showing results for form"*. **Absent, never empty**, so presence is
+ *   the branch.
  */
 export function rankSearchEntries(structure, query, entries, opts = {}) {
   const limit = Number.isInteger(opts.limit) && opts.limit > 0 ? opts.limit : 0
@@ -523,16 +528,28 @@ export function rankSearchEntries(structure, query, entries, opts = {}) {
 
   let scores = score(weights)
   let fuzzy = false
+  let corrections = null
 
   // The fallback, and it runs only on a total miss — see `fuzzyTerms`.
   if (!scores.size && opts.fuzzy !== false) {
-    const corrections = new Map()
+    const weighted = new Map()
+    const substitutes = []
     for (const t of new Set(qTerms)) {
-      for (const id of fuzzyTerms(structure, t)) if (!corrections.has(id)) corrections.set(id, 1)
+      const ids = fuzzyTerms(structure, t)
+      if (!ids.length) continue
+      for (const id of ids) if (!weighted.has(id)) weighted.set(id, 1)
+      // ⭐ ONE substitute per query term, and it is the COMMONEST of the
+      // candidates — the same reasoning the prefix cap uses: `df` order is the
+      // word a visitor was most likely reaching for. The others still score; this
+      // is only what a caller renders as "showing results for …".
+      let best = ids[0]
+      for (const id of ids) if (df[id] > df[best]) best = id
+      substitutes.push({ term: t, to: structure.terms[best] })
     }
-    if (corrections.size) {
-      scores = score(corrections)
+    if (weighted.size) {
+      scores = score(weighted)
       fuzzy = scores.size > 0
+      if (fuzzy) corrections = substitutes
     }
   }
   if (!scores.size) return { hits: [], total: 0 }
@@ -589,7 +606,12 @@ export function rankSearchEntries(structure, query, entries, opts = {}) {
     }
     if (boosted) head.sort(better)
   }
-  return { hits: limit ? head.slice(0, limit) : head, total }
+  const out2 = { hits: limit ? head.slice(0, limit) : head, total }
+  // ⛔ ABSENT when nothing was corrected, never `[]` — a consumer branching on
+  // presence is the shape asked for, and an empty array reads as "corrected, to
+  // nothing".
+  if (corrections && corrections.length) out2.corrections = corrections
+  return out2
 
   /** BM25F over a term-id → multiplier map. */
   function score(weighted) {

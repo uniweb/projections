@@ -342,3 +342,28 @@ describe('the fuzzy fallback is STRICTLY BELOW literal', () => {
     expect(idf.hits.every((h) => !h.fuzzy)).toBe(true)
   })
 })
+
+describe('corrections — what a caller renders as "showing results for …"', () => {
+  const es = [doc('Form Builder', 'a form field and its validation'), doc('Testing Guide', 'run the test suite')]
+  const ix = buildSearchStructure(es)
+
+  it('names the query term and its substitute, one per corrected term', () => {
+    const res = rankSearchEntries(ix, 'fomr', es, { prefix: false })
+    expect(res.corrections).toEqual([{ term: 'fomr', to: 'form' }])
+    expect(res.hits.length).toBeGreaterThan(0)
+  })
+
+  it('⛔ is ABSENT — never empty — when nothing was corrected', () => {
+    expect(rankSearchEntries(ix, 'form', es)).not.toHaveProperty('corrections')
+    expect(rankSearchEntries(ix, 'nothingatall', es)).not.toHaveProperty('corrections')
+  })
+
+  it('picks the COMMONEST candidate as the substitute', () => {
+    // `fore` is one edit from both `form` (2 docs) and `more` (1 doc); the
+    // commoner one is what a visitor was most likely reaching for.
+    const corpus = [doc('form a', 'form'), doc('form b', 'form'), doc('more', 'more')]
+    const ix2 = buildSearchStructure(corpus)
+    expect(rankSearchEntries(ix2, 'fore', corpus, { prefix: false }).corrections)
+      .toEqual([{ term: 'fore', to: 'form' }])
+  })
+})
