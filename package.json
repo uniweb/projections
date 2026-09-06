@@ -1,7 +1,7 @@
 {
   "name": "@uniweb/projections",
-  "version": "0.5.11",
-  "description": "Projections of a Uniweb site's content \u2014 agent index, per-page markdown, search index. Pure JS, runs anywhere.",
+  "version": "0.5.12",
+  "description": "Projections of a Uniweb site's content — agent index, per-page markdown, search index. Pure JS, runs anywhere.",
   "type": "module",
   "exports": {
     ".": "./src/index.js",
