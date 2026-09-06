@@ -44,3 +44,18 @@ export {
 } from './generate.js'
 
 export { generateRecordSearchIndex } from './records.js'
+
+// ── The engine: indexing and ranking the entries the generators above produce ──
+//
+// ⭐ Two jobs, one artifact between them. `generateSearchIndex` produces the
+// ENTRIES; these index and rank them, so one site ranks the same wherever it is
+// served. Contributed in full on 2026-09-06 from a server-side search lane that
+// had measured the format against the alternative; the fuzzy fallback is ours.
+export {
+  buildSearchStructure,
+  rankSearchEntries,
+  prefixTerms,
+  fuzzyTerms,
+  fold,
+  tokenize,
+} from './engine.js'
