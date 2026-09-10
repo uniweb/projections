@@ -16,10 +16,10 @@
  * @module @uniweb/projections/search
  *
  * @example
- * import { generateSearchIndex, isSearchEnabled } from '@uniweb/projections/search'
+ * import { generateSearchIndex } from '@uniweb/projections/search'
  *
  * // Check if search is enabled
- * if (isSearchEnabled(siteContent)) {
+ * if (callerDecidedSearchIsOn) {
  *   // Generate index for current locale
  *   const index = generateSearchIndex(siteContent, {
  *     locale: 'en'
@@ -38,7 +38,6 @@ export {
 export {
   generateSearchIndex,
   mergeSearchIndexes,
-  isSearchEnabled,
   getSearchConfig,
   getSearchIndexFilename
 } from './generate.js'

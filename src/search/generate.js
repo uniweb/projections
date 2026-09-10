@@ -103,14 +103,17 @@ export function mergeSearchIndexes(pagesIndex, recordIndexes = []) {
 }
 
 /**
- * Check if search is enabled for a site
- * @param {Object} siteContent - Parsed site-content.json
- * @returns {boolean}
+ * ⛔ `isSearchEnabled(siteContent)` was REMOVED 2026-09-10, not renamed.
+ *
+ * This package is a helper library: it derives artifacts from content and does
+ * not decide whether it should run. Gating on a site setting is the caller's
+ * job, and the caller is `@uniweb/build` — `site/plugin.js::searchDeclaredOn`,
+ * which also reads the boolean `search: false` form this predicate silently
+ * mishandled (`false.enabled` is `undefined`, and `undefined !== false`).
+ *
+ * If you are looking for the render-time question, it is
+ * `Website.isServiceEnabled('search')` in `@uniweb/core`.
  */
-export function isSearchEnabled(siteContent) {
-  // Search is enabled by default unless explicitly disabled
-  return siteContent.config?.search?.enabled !== false
-}
 
 /**
  * Get search configuration from site content

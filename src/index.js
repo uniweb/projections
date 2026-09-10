@@ -58,7 +58,6 @@ export {
   generateSearchIndex,
   mergeSearchIndexes,
   generateRecordSearchIndex,
-  isSearchEnabled,
   getSearchConfig,
   getSearchIndexFilename,
 } from './search/index.js'
