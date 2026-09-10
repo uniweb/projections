@@ -47,10 +47,18 @@ export const AGENTS_KEYS = Object.freeze([
 /**
  * Read the site's `agents:` block.
  *
- * Deliberately NOT `features:` — that list is the billing-intent declaration
- * paired with a server-side entitlement gate, and projections are free. A
- * free capability in that list would blur what `features:` means for
- * everything else in it.
+ * Deliberately NOT `features:`, and the reason is now stronger than when this
+ * was written: framework reads `features:` NOWHERE. The sync lane does not
+ * carry it (it is not in `uwx/site.js`'s allowlist) and the bundle lane spreads
+ * site.yml whole, so it lands at `config.features` on a static payload where
+ * nothing consumes it.
+ *
+ * ⚠️ This read "the billing-intent declaration paired with a server-side
+ * entitlement gate" until 2026-09-10 — a live meaning it does not have on our
+ * side. Backend removed `publish_features` from the site-content entity on the
+ * ruling that a requested service comes from `services` only [Diego,
+ * 2026-09-08]. Projections being free is still true and still a reason; the
+ * list it was contrasted against is inert.
  *
  * @param {Object} [siteConfig] - `siteContent.config`
  * @returns {{index: boolean, markdown: boolean, exclude: string[]}}
