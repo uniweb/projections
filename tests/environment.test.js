@@ -35,6 +35,8 @@ const ALLOWED_PACKAGES = new Set([
   '@uniweb/content-writer',
   '@uniweb/core/locale-config',
   '@uniweb/core/section-id',
+  '@uniweb/core/route-match',
+  '@uniweb/core/fetch-config',
 ])
 
 /** Globals that only exist in one environment. */
