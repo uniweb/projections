@@ -75,18 +75,22 @@ describe('recordRoutes', () => {
     expect(recordRoutes(site([list('/', 'articles'), list('/team', 'people')]))).toEqual([])
   })
 
-  it('reads the query from the page itself, or the site, when the parent declares none', () => {
+  it('reads the query from the page itself, or — for a top-level page — the site, when the parent declares none', () => {
     const own = site([
       { route: '/blog' },
       { route: '/blog/:slug', parent: '/blog', fetch: { query: 'articles', as: 'articles' } },
     ])
     expect(recordRoutes(own)).toEqual([{ name: 'articles', route: '/blog' }])
 
-    const fromSite = site(
+    const fromSite = site([{ route: '/:slug' }], { fetch: { query: 'articles', as: 'articles' } })
+    expect(recordRoutes(fromSite)).toEqual([{ name: 'articles', route: '/' }])
+
+    // ⛔ the site's binding is no deeper page's route query (ruled 2026-09-13)
+    const deeper = site(
       [{ route: '/blog' }, { route: '/blog/:slug', parent: '/blog' }],
       { fetch: { query: 'articles', as: 'articles' } }
     )
-    expect(recordRoutes(fromSite)).toEqual([{ name: 'articles', route: '/blog' }])
+    expect(recordRoutes(deeper)).toEqual([])
   })
 
   it('reads the key a page\'s own sections share when no level declares one', () => {

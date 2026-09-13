@@ -18,15 +18,15 @@
  *     that segment. A nested parametric page (`/members/:slug/cv`) and a static page
  *     both contribute nothing;
  *   - **which query** — `routeQuery` (`@uniweb/core/fetch-config`): the page's own
- *     query, else its parent page's, else the site's, else the key its own sections
- *     share. The same rule the runtime narrows by, so the name here is the name the
- *     record is delivered under.
+ *     query, else its parent page's, else — for a top-level page — the site's, else the
+ *     key its own sections share. The same rule the runtime narrows by, so the name
+ *     here is the name the record is delivered under.
  *
  * @module
  */
 
 import { parentRouteOf, recordRouteBase } from '@uniweb/core/route-match'
-import { routeQuery, sectionFetches } from '@uniweb/core/fetch-config'
+import { routeQuery, sectionFetches, siteReaches } from '@uniweb/core/fetch-config'
 
 /**
  * @param {Object} content - a site-content payload (`{ pages, config }`)
@@ -68,7 +68,8 @@ export function recordRoutes(content) {
     const query = routeQuery({
       page: page.fetch,
       parent: parent?.fetch,
-      site: siteFetch,
+      // the site's binding is a route query for a top-level page only (`siteReaches`)
+      site: siteReaches(parent) ? siteFetch : null,
       sections: sectionFetches(page.sections),
     })
     if (!query?.key || seen.has(query.key)) continue
