@@ -38,11 +38,13 @@ describe('recordRoutes', () => {
     ])
     expect(recordRoutes(live)).toEqual([{ name: 'members', route: '/members' }])
 
-    const remote = site([
-      { route: '/items', fetch: { url: 'https://api.example.com/items', as: 'items' } },
+    // an external query: its binding carries a derived `path`, and there is no file behind it
+    const external = site([
+      { route: '/items', fetch: { query: 'items', path: '/data/items.json', as: 'items' } },
       { route: '/items/:id', parent: '/items', isDynamic: true },
     ])
-    expect(recordRoutes(remote)[0]).not.toHaveProperty('path')
+    external.config = { ...external.config, queries: { items: { url: 'https://api.example.com/items' } } }
+    expect(recordRoutes(external)).toEqual([{ name: 'items', route: '/items' }])
   })
 
   it('a catch-all page is a record page too', () => {

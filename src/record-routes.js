@@ -40,9 +40,9 @@ import { routeQuery, sectionFetches } from '@uniweb/core/fetch-config'
  *   file's basename are the same string — true today, and a promise between two of
  *   our conventions rather than a mechanism. Returning the authored path makes the
  *   `/data/` convention ours to keep and theirs to read (hosting, 2026-09-12).
- *   ⛔ **Absent when the query has no compiled file** — a records-service project, a
- *   remote `url:`. A consumer's static arm should read that as *no file to read*,
- *   not as a name to guess.
+ *   ⛔ **Absent when the query has no compiled file** — a records-service project, or
+ *   an external query (one declaring `url:`, whose records are its address's). A
+ *   consumer's static arm should read that as *no file to read*, not as a name to guess.
  *
  *   ⚖️ **One entry per name.** If two parametric pages resolve the same query, the
  *   first in page order wins — stated here so a caller never has to dedupe or depend
@@ -73,7 +73,10 @@ export function recordRoutes(content) {
     })
     if (!query?.key || seen.has(query.key)) continue
     seen.add(query.key)
-    const path = query.config?.path
+    // A binding carries its compiled file's address even when its query is external;
+    // an external query has no file, so none is handed out.
+    const external = typeof content?.config?.queries?.[query.config?.query]?.url === 'string'
+    const path = external ? null : query.config?.path
     out.push(typeof path === 'string' && path ? { name: query.key, route: base, path } : { name: query.key, route: base })
   }
   return out
