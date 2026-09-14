@@ -6,25 +6,33 @@
  * per-record detail files into each item before calling this function.
  */
 
+import { fillRoutePattern } from '@uniweb/core/route-match'
+
 /**
- * Compose a record's route the way the build does, for the sources that have
- * not already done it.
+ * A record's URL, for the search entry.
  *
- * `collections[name].route` is authored in `site.yml` (see the blog and
- * international templates). When it is set, the build's collection processor
- * already stamps `item.route` on every record — so the route below is a
- * *fallback* for records that arrived without one (an API-backed collection a
- * host assembled itself), never a second opinion about records that have one.
+ * ⭐ **With `config.pattern`** — the route pattern of the page that shows one record of the
+ * query, as `recordRoutes` returns it — the URL is that pattern FILLED from the record
+ * (`fillRoutePattern`): the one encoder the runtime fills a rendered record's `$route`
+ * with, so a search result and a card link to the same address, a `[...path]` page's
+ * placement included. A record that cannot fill it gets no route.
  *
- * The trailing-slash strip matches `collectItems` in
- * `@uniweb/build`'s `site/collection-processor.js`. Without it a `route:
- * /blog/` authored with a slash yields `/blog//my-post` here and
- * `/blog/my-post` there — two answers to one question, on a value nobody
- * checks until a visitor clicks it.
+ * ⚠️ **Without it**, the older composition stands: the record's own `route`, else
+ * `{config.route}/{slug}`. That was right while the build baked a `route` into compiled
+ * records from `route:` on a query; since 2026-09-14 `route:` is retired, the build bakes
+ * nothing, and a record's `route` is the author's own field — so a caller should pass
+ * `pattern`. `{route}/{slug}` is wrong for a `[...path]` page, which is why `pattern`
+ * exists.
+ *
+ * The trailing-slash strip keeps `route: /blog/` from yielding `/blog//my-post`.
  */
-function composeRoute(configRoute, slug) {
-  if (typeof configRoute !== 'string' || configRoute === '') return undefined
-  return `${configRoute.replace(/\/$/, '')}/${slug}`
+function recordRoute(config, item, slug) {
+  if (typeof config?.pattern === 'string' && config.pattern) {
+    return fillRoutePattern(config.pattern, item) ?? undefined
+  }
+  if (item.route) return item.route
+  if (typeof config?.route !== 'string' || config.route === '') return undefined
+  return `${config.route.replace(/\/$/, '')}/${slug}`
 }
 
 /**
@@ -107,12 +115,10 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
     const fields = declaredFields ?? searchableKeys(item)
     const content = fields.map(f => item[f] || '').filter(Boolean).join(' ')
     const slug = item.slug || item.id || String(item.title || '').toLowerCase().replace(/\s+/g, '-')
-    // The record's own route wins: the build already resolved it against the
-    // same config, so recomputing here could only disagree. `route` is omitted
-    // entirely when neither source can supply one — a missing key is detectable
-    // by a consumer, where the string "undefined/my-post" is a link that ranks
-    // correctly, looks plausible, and 404s on click.
-    const route = item.route || composeRoute(config.route, slug)
+    // `route` is omitted entirely when nothing can supply one — a missing key is
+    // detectable by a consumer, where the string "undefined/my-post" is a link that
+    // ranks correctly, looks plausible, and 404s on click.
+    const route = recordRoute(config, item, slug)
     return {
       // ⛔ RENAMED 2026-08-27 — `collection` is FRAMEWORK'S build concept (a named
       // set our build compiles to one file) and the live lane has no such thing:

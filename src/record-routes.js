@@ -30,10 +30,18 @@ import { routeQuery, sectionFetches, siteReaches } from '@uniweb/core/fetch-conf
 
 /**
  * @param {Object} content - a site-content payload (`{ pages, config }`)
- * @returns {Array<{ name: string, route: string, path?: string }>} one entry per
- *   query that has a detail page: `name` is the `content.data` key the record
+ * @returns {Array<{ name: string, route: string, pattern: string, path?: string }>} one
+ *   entry per query that has a detail page: `name` is the `content.data` key the record
  *   arrives under, `route` the base a record's URL composes onto (`{route}/{param}`),
- *   and `path` the query's compiled data file when it has one.
+ *   `pattern` the page's own route pattern, and `path` the query's compiled data file
+ *   when it has one.
+ *
+ *   ⭐ **`pattern` is the address a record's URL is FILLED from** (`fillRoutePattern`,
+ *   `@uniweb/core/route-match`) — the one encoder the runtime's `$route` uses too. Added
+ *   2026-09-14, when the build stopped baking a `route` into compiled records: `{route}/
+ *   {param}` is right for a `[slug]` page and wrong for a `[...path]` one, whose record URL
+ *   carries the record's placement — `/logbook/field/river-survey`, not
+ *   `/logbook/river-survey`. `generateRecordSearchIndex` reads it when handed it.
  *
  *   ⭐ **`path` is returned rather than composed from `name`.** A consumer that
  *   templates a filename out of the key is betting that the key and the compiled
@@ -78,7 +86,8 @@ export function recordRoutes(content) {
     // an external query has no file, so none is handed out.
     const external = typeof content?.config?.queries?.[query.config?.query]?.url === 'string'
     const path = external ? null : query.config?.path
-    out.push(typeof path === 'string' && path ? { name: query.key, route: base, path } : { name: query.key, route: base })
+    const entry = { name: query.key, route: base, pattern: page.route }
+    out.push(typeof path === 'string' && path ? { ...entry, path } : entry)
   }
   return out
 }
