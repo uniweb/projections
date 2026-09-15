@@ -84,6 +84,54 @@ describe('the link — the record’s own route wins', () => {
 })
 
 /**
+ * ⛔ A live record carries its handle as `$name` and no `slug`. Until 2026-09-14 the
+ * handle was read from `slug` alone, so on a live lane every entry shared ONE id
+ * (`record:members:`) and, with no `pattern`, one route (`/members/`) — measured
+ * against records shaped exactly like these. A `pattern` repaired the route and could
+ * not repair the id, which is built from the same handle.
+ */
+describe('a live record — its handle is `$name`', () => {
+  const live = [
+    { $uuid: 'u1', $name: 'alice', name: 'Alice Nguyen' },
+    { $uuid: 'u2', $name: 'bob', name: 'Bob Stone' },
+  ]
+
+  test('each record keeps its own id and, with no `pattern`, its own route', () => {
+    const { entries } = generateRecordSearchIndex('members', { route: '/members' }, live, 'en')
+    expect(entries.map((e) => e.id)).toEqual(['record:members:alice', 'record:members:bob'])
+    expect(entries.map((e) => e.route)).toEqual(['/members/alice', '/members/bob'])
+  })
+
+  test('with a `pattern` the id carries the handle too — not only the route', () => {
+    const cfg = { route: '/members', pattern: '/members/:slug' }
+    const { entries } = generateRecordSearchIndex('members', cfg, live, 'en')
+    expect(entries.map((e) => [e.id, e.route])).toEqual([
+      ['record:members:alice', '/members/alice'],
+      ['record:members:bob', '/members/bob'],
+    ])
+  })
+
+  test('`$name` is the placement even when the Model declares its own `slug` field', () => {
+    const { entries } = generateRecordSearchIndex('members', { route: '/members' }, [{ $name: 'alice', slug: 'authored-data' }], 'en')
+    expect(entries[0].id).toBe('record:members:alice')
+  })
+
+  test('the title follows the page\'s rule — `title`, `name`, then the handle', () => {
+    const { entries } = generateRecordSearchIndex('members', { route: '/members' }, [
+      { $name: 'alice', name: 'Alice Nguyen' },
+      { $name: 'bare' },
+      { $name: 'post', title: 'A Post', name: 'Not this' },
+    ], 'en')
+    expect(entries.map((e) => e.title)).toEqual(['Alice Nguyen', 'bare', 'A Post'])
+  })
+
+  test('CONTROL — a file-lane record is keyed by its `slug`, as before', () => {
+    const { entries } = generateRecordSearchIndex('members', { route: '/members' }, [{ slug: 'alice', name: 'Alice Nguyen' }], 'en')
+    expect(entries[0]).toMatchObject({ id: 'record:members:alice', route: '/members/alice', title: 'Alice Nguyen' })
+  })
+})
+
+/**
  * ⛔ The two schema claims this function used to make, both removed 2026-08-25.
  *
  * The suite above passes identically before and after that change, because

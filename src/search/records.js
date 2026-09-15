@@ -6,7 +6,7 @@
  * per-record detail files into each item before calling this function.
  */
 
-import { fillRoutePattern } from '@uniweb/core/route-match'
+import { fillRoutePattern, recordHandle, recordTitle } from '@uniweb/core/route-match'
 
 /**
  * A record's URL, for the search entry.
@@ -18,11 +18,12 @@ import { fillRoutePattern } from '@uniweb/core/route-match'
  * placement included. A record that cannot fill it gets no route.
  *
  * ⚠️ **Without it**, the older composition stands: the record's own `route`, else
- * `{config.route}/{slug}`. That was right while the build baked a `route` into compiled
- * records from `route:` on a query; since 2026-09-14 `route:` is retired, the build bakes
- * nothing, and a record's `route` is the author's own field — so a caller should pass
- * `pattern`. `{route}/{slug}` is wrong for a `[...path]` page, which is why `pattern`
- * exists.
+ * `{config.route}/{handle}`, the handle being `$name` on a live record and `slug` on a
+ * file-lane one (`recordHandle`). That was right while the build baked a `route` into
+ * compiled records from `route:` on a query; since 2026-09-14 `route:` is retired, the
+ * build bakes nothing, and a record's `route` is the author's own field — so a caller
+ * should pass `pattern`. `{route}/{handle}` is wrong for a `[...path]` page, which is why
+ * `pattern` exists.
  *
  * The trailing-slash strip keeps `route: /blog/` from yielding `/blog//my-post`.
  */
@@ -114,7 +115,11 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
   const entries = items.map(item => {
     const fields = declaredFields ?? searchableKeys(item)
     const content = fields.map(f => item[f] || '').filter(Boolean).join(' ')
-    const slug = item.slug || item.id || String(item.title || '').toLowerCase().replace(/\s+/g, '-')
+    // ⭐ The record's HANDLE — `$name` on a live record, `slug` on a file-lane one
+    // (`recordHandle`). ⛔ Until 2026-09-14 this read `slug` alone, so every record that
+    // arrived with `$name` and no `slug` got ONE id, `record:<group>:`, and — with no
+    // `pattern` — one route, `{route}/`: an entry per record, all opening the list.
+    const slug = recordHandle(item) || item.id || String(item.title || '').toLowerCase().replace(/\s+/g, '-')
     // `route` is omitted entirely when nothing can supply one — a missing key is
     // detectable by a consumer, where the string "undefined/my-post" is a link that
     // ranks correctly, looks plausible, and 404s on click.
@@ -133,7 +138,9 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
       type: 'record',
       group: name,
       ...(route ? { route } : {}),
-      title: item.title || item.name || slug,
+      // The rule the record's own page is titled by (`recordTitle`: `title`, `name`, the
+      // handle), so a result and the page it opens are called the same thing.
+      title: recordTitle(item) || slug,
       content,
       excerpt: content.length > 160
         ? content.slice(0, 160).trim() + '…'
