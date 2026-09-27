@@ -39,10 +39,11 @@ import { routeQuery, sectionFetches, siteReaches } from '@uniweb/core/fetch-conf
  *
  *   ⭐ **`pattern` is the address a record's URL is FILLED from** (`fillRoutePattern`,
  *   `@uniweb/core/route-match`) — the one encoder the runtime's `$route` uses too. Added
- *   2026-09-14, when the build stopped baking a `route` into compiled records: `{route}/
- *   {param}` is right for a `[slug]` page and wrong for a `[...path]` one, whose record URL
- *   carries the record's placement — `/logbook/field/river-survey`, not
- *   `/logbook/river-survey`. `generateRecordSearchIndex` reads it when handed it.
+ *   2026-09-14, when the build stopped baking a `route` into compiled records, and while a
+ *   `[...path]` record's URL carried its branch (`/logbook/field/river-survey`). Since
+ *   2026-09-27 a record carries no branch, and its URL under `[...path]` is `{route}/{handle}`
+ *   as under `[slug]`, but `pattern` stays the one address and `fillRoutePattern` the one
+ *   encoder. `generateRecordSearchIndex` reads it when handed it.
  *
  *   ⭐ **`path` is returned rather than composed from `name`.** A consumer that
  *   templates a filename out of the key is betting that the key and the compiled

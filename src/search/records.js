@@ -14,15 +14,15 @@ import { fillRoutePattern, recordHandle, recordTitle } from '@uniweb/core/route-
  * ⭐ **With `config.pattern`** — the route pattern of the page that shows one record of the
  * query, as `recordRoutes` returns it — the URL is that pattern FILLED from the record
  * (`fillRoutePattern`): the one encoder the runtime fills a rendered record's `$route`
- * with, so a search result and a card link to the same address, a `[...path]` page's
- * placement included. A record that cannot fill it gets no route.
+ * with, so a search result and a card link to the same address. A record that cannot fill it
+ * gets no route.
  *
  * ⚠️ **Without it**, the older composition stands: the record's own `route`, else
  * `{config.route}/{handle}`, the handle being the record's `$name` (`recordHandle`). That was right while the build baked a `route` into
  * compiled records from `route:` on a query; since 2026-09-14 `route:` is retired, the
  * build bakes nothing, and a record's `route` is the author's own field — so a caller
- * should pass `pattern`. `{route}/{handle}` is wrong for a `[...path]` page, which is why
- * `pattern` exists.
+ * should pass `pattern`. `{route}/{handle}` was wrong for a `[...path]` page while a record's URL
+ * there carried its branch (until 2026-09-27), which is why `pattern` exists.
  *
  * The trailing-slash strip keeps `route: /blog/` from yielding `/blog//my-post`.
  */
