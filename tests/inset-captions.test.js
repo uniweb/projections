@@ -17,7 +17,7 @@
 import { describe, it, expect } from 'vitest'
 import { renderPageMarkdown } from '../src/markdown.js'
 import { extractSearchContent } from '../src/search/extract.js'
-import { page, site, sectionWithInsets } from './helpers.js'
+import { page, site, section, sectionWithInsets } from './helpers.js'
 
 const MD = '![Platform overview](@Diagram)\n\nSee ![Smith 2024](@Cite) here.'
 
@@ -72,5 +72,41 @@ describe('inset captions', () => {
     const p = page('/x', { title: 'X', sections: [sectionWithInsets('![](@Spacer)')] })
     expect(searchText(p)).not.toContain('Spacer')
     expect(renderPageMarkdown(p, {})).not.toContain('Spacer')
+  })
+})
+
+/**
+ * Since 2026-09-27 a section's content keeps the `inset_ref` the author wrote — the
+ * build no longer extracts it — so a projection receives the node itself, caption in
+ * `attrs.alt`. ⛔ content-writer SERIALIZES an `inset_ref`, as `![caption](@Diagram)`,
+ * so an unresolved one would put the component name into the page's `.md`.
+ */
+describe('inset captions, from the node as the author wrote it', () => {
+  const asWritten = () => page('/arch', { title: 'Architecture', sections: [section(MD)] })
+
+  it('reaches both projections, block-level and inline', () => {
+    const p = asWritten()
+    const md = renderPageMarkdown(p, {})
+    const text = searchText(p)
+    for (const caption of ['Platform overview', 'Smith 2024']) {
+      expect(md).toContain(caption)
+      expect(text).toContain(caption)
+    }
+    expect(text).toContain('See Smith 2024 here.')
+  })
+
+  it('never leaks the component name into either', () => {
+    const p = asWritten()
+    for (const out of [renderPageMarkdown(p, {}), searchText(p)]) {
+      expect(out).not.toContain('@Diagram')
+      expect(out).not.toContain('Diagram')
+      expect(out).not.toContain('Cite')
+    }
+  })
+
+  it('drops a captionless inset quietly', () => {
+    const p = page('/x', { title: 'X', sections: [section('Before\n\n![](@Spacer)')] })
+    expect(renderPageMarkdown(p, {})).not.toContain('Spacer')
+    expect(searchText(p)).not.toContain('Spacer')
   })
 })

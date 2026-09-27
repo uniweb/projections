@@ -63,10 +63,13 @@ renders a section, which is a *rendering* assignment and foundation-specific.
 Emitting it would break the property this package exists for: the output is a
 projection of the **site**, identical under a swapped foundation.
 
-The output carries Uniweb dialect (`![](lu-house)` icons,
-`![desc](@Component){params}` insets). That is what the author wrote, and it is
-more informative to an agent working on a Uniweb site than a lossy translation
-to plain CommonMark would be.
+The output carries Uniweb dialect for icons (`![](lu-house)`). That is what the
+author wrote, and it is more informative to an agent working on a Uniweb site
+than a lossy translation to plain CommonMark would be.
+
+An inset — `![A diagram](@NetworkDiagram)` — contributes its caption as plain
+text, never its component: a component name is a rendering assignment, like a
+section's `type`. The search index reads insets the same way.
 
 ## Configuration
 

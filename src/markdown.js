@@ -11,10 +11,15 @@
  * this projection worth having: it is a projection of the *site* ingredient
  * alone, identical under a swapped foundation.
  *
- * The output carries Uniweb dialect (`![](lu-house)` icons,
- * `![desc](@Component){params}` insets). That is what the author wrote, and
- * it is more informative for an agent working on a Uniweb site than a
- * lossy translation to plain CommonMark would be.
+ * The output carries Uniweb dialect for icons (`![](lu-house)`). That is what
+ * the author wrote, and it is more informative for an agent working on a
+ * Uniweb site than a lossy translation to plain CommonMark would be.
+ *
+ * ⛔ An INSET contributes its caption as plain text, never its `@Component`:
+ * a component name is a rendering assignment, like `type`
+ * (`insets.js::resolveInsetCaptions`). *Until 2026-09-27 this said insets
+ * survive as `![desc](@Component){params}` too — a shape this projection never
+ * received while the site build extracted insets, and one it now resolves.*
  */
 
 import { proseMirrorToMarkdown } from '@uniweb/content-writer'

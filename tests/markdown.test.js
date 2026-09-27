@@ -24,13 +24,17 @@ describe('renderPageMarkdown', () => {
     expect(renderPageMarkdown(null)).toBe('')
   })
 
-  test('carries Uniweb dialect — icons and insets survive', () => {
+  test('carries Uniweb dialect for icons; an inset leaves its caption, not its component', () => {
+    // ⛔ This asserted `![A diagram](@NetworkDiagram){variant=compact}` survived until
+    // 2026-09-27 — a reader-only fixture of a shape this projection never received while
+    // the site build extracted insets. A component name is a rendering assignment.
     const p = page('/x', {
       sections: [section('![](lu-house)\n\n![A diagram](@NetworkDiagram){variant=compact}')],
     })
     const output = renderPageMarkdown(p)
     expect(output).toContain('![](lu-house)')
-    expect(output).toContain('![A diagram](@NetworkDiagram){variant=compact}')
+    expect(output).toContain('A diagram')
+    expect(output).not.toContain('NetworkDiagram')
   })
 
   test('a concept block projects its PROSE, not a serialization artifact', () => {

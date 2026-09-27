@@ -56,7 +56,9 @@ export function site(pages, config = {}) {
 }
 
 /**
- * A section whose insets have been extracted, the way the BUILD does it.
+ * A section whose insets have been extracted, the way the BUILD did it until
+ * 2026-09-27 — the shape a document stored before then still carries. Content keeps
+ * the author's `inset_ref` since; `section(markdown)` is that shape.
  *
  * ⛔ `markdownToProseMirror` alone is not enough here. The reader emits
  * `inset_ref` (caption in `attrs.alt`, component in `attrs.component`); it is
