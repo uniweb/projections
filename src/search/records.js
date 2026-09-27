@@ -1,7 +1,7 @@
 /**
  * Generate search index for a file-based collection.
  *
- * Collection cascade files (`data/{name}.json`) contain all non-deferred fields.
+ * A query's list (`data/{name}.json`) holds each record's brief.
  * If `search.fetchDetail: true` is set, the caller is responsible for merging
  * per-record detail files into each item before calling this function.
  */
