@@ -28,7 +28,7 @@ import { fillRoutePattern, recordHandle, recordTitle } from '@uniweb/core/route-
  */
 function recordRoute(config, item, slug) {
   if (typeof config?.pattern === 'string' && config.pattern) {
-    return fillRoutePattern(config.pattern, item) ?? undefined
+    return fillRoutePattern(config.pattern, item, { field: config.field ?? null }) ?? undefined
   }
   if (item.route) return item.route
   if (typeof config?.route !== 'string' || config.route === '') return undefined

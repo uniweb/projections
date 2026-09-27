@@ -25,16 +25,17 @@
  * @module
  */
 
-import { parentRouteOf, recordRouteBase } from '@uniweb/core/route-match'
+import { parentRouteOf, recordRouteBase, routeFieldOf } from '@uniweb/core/route-match'
 import { routeQuery, sectionFetches, siteReaches } from '@uniweb/core/fetch-config'
 
 /**
  * @param {Object} content - a site-content payload (`{ pages, config }`)
- * @returns {Array<{ name: string, route: string, pattern: string, path?: string }>} one
+ * @returns {Array<{ name: string, route: string, pattern: string, path?: string, field?: string }>} one
  *   entry per query that has a detail page: `name` is the `content.data` key the record
  *   arrives under, `route` the base a record's URL composes onto (`{route}/{param}`),
- *   `pattern` the page's own route pattern, and `path` the query's compiled data file
- *   when it has one.
+ *   `pattern` the page's own route pattern, `path` the query's compiled data file
+ *   when it has one, and `field` the record field the query binds the URL's last segment
+ *   to (`where: { slug: ':slug' }`), when it binds one — else a record's URL names its `$name`.
  *
  *   ⭐ **`pattern` is the address a record's URL is FILLED from** (`fillRoutePattern`,
  *   `@uniweb/core/route-match`) — the one encoder the runtime's `$route` uses too. Added
@@ -87,6 +88,10 @@ export function recordRoutes(content) {
     const external = typeof content?.config?.queries?.[query.config?.query]?.url === 'string'
     const path = external ? null : query.config?.path
     const entry = { name: query.key, route: base, pattern: page.route }
+    // The field the query binds the URL's last segment to, when it binds one (`routeFieldOf`) —
+    // what a record's URL is filled from in place of its `$name`.
+    const field = routeFieldOf(content?.config?.queries?.[query.config?.query])
+    if (field) entry.field = field
     out.push(typeof path === 'string' && path ? { ...entry, path } : entry)
   }
   return out
