@@ -125,9 +125,11 @@ describe('a live record — its handle is `$name`', () => {
     expect(entries.map((e) => e.title)).toEqual(['Alice Nguyen', 'bare', 'A Post'])
   })
 
-  test('CONTROL — a file-lane record is keyed by its `slug`, as before', () => {
-    const { entries } = generateRecordSearchIndex('members', { route: '/members' }, [{ slug: 'alice', name: 'Alice Nguyen' }], 'en')
+  test('a file-lane record is keyed by its `$name` too — a `slug` field is the author\'s data (2026-09-27)', () => {
+    const { entries } = generateRecordSearchIndex('members', { route: '/members' }, [{ $name: 'alice', name: 'Alice Nguyen' }], 'en')
     expect(entries[0]).toMatchObject({ id: 'record:members:alice', route: '/members/alice', title: 'Alice Nguyen' })
+    // …and neither handle is searchable text
+    expect(entries[0].content).not.toContain('alice')
   })
 })
 
@@ -143,7 +145,7 @@ describe('a live record — its handle is `$name`', () => {
 describe('no schema claims — a collection that is not a blog', () => {
   // A `people` collection: no `title` anywhere, and fields no blog has.
   const person = {
-    slug: 'a-okafor',
+    $name: 'a-okafor',
     name: 'Ada Okafor',
     department: 'Biology',
     tenured: true,
@@ -225,7 +227,7 @@ describe('no schema claims — a collection that is not a blog', () => {
 
   test('`item` drops our wiring keys, structure, and long text', () => {
     const heavy = {
-      slug: 'x',
+      $name: 'x',
       route: '/x',
       label: 'Short label',
       body: 'y'.repeat(500),
@@ -235,7 +237,7 @@ describe('no schema claims — a collection that is not a blog', () => {
     const entry = generateRecordSearchIndex('things', {}, [heavy], 'en').entries[0]
 
     expect(entry.item.label).toBe('Short label')
-    expect(entry.item).not.toHaveProperty('slug') // ours
+    expect(entry.item).not.toHaveProperty('$name') // the system's
     expect(entry.item).not.toHaveProperty('route') // ours
     expect(entry.item).not.toHaveProperty('content') // structure a card cannot render
     expect(entry.item).not.toHaveProperty('tags') // ditto

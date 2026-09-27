@@ -18,8 +18,7 @@ import { fillRoutePattern, recordHandle, recordTitle } from '@uniweb/core/route-
  * placement included. A record that cannot fill it gets no route.
  *
  * ⚠️ **Without it**, the older composition stands: the record's own `route`, else
- * `{config.route}/{handle}`, the handle being `$name` on a live record and `slug` on a
- * file-lane one (`recordHandle`). That was right while the build baked a `route` into
+ * `{config.route}/{handle}`, the handle being the record's `$name` (`recordHandle`). That was right while the build baked a `route` into
  * compiled records from `route:` on a query; since 2026-09-14 `route:` is retired, the
  * build bakes nothing, and a record's `route` is the author's own field — so a caller
  * should pass `pattern`. `{route}/{handle}` is wrong for a `[...path]` page, which is why
@@ -54,7 +53,7 @@ function recordRoute(config, item, slug) {
  * names OUR OWN keys rather than guessing at anyone's schema. Do not add a
  * field because it "looks like" metadata.
  */
-const WIRING_KEYS = new Set(['$uuid', 'slug', 'id', 'route', 'image'])
+const WIRING_KEYS = new Set(['id', 'route', 'image'])
 
 /** A value a card can render — anything else is structure we cannot interpret. */
 const isPrimitive = (v) =>
@@ -115,8 +114,8 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
   const entries = items.map(item => {
     const fields = declaredFields ?? searchableKeys(item)
     const content = fields.map(f => item[f] || '').filter(Boolean).join(' ')
-    // ⭐ The record's HANDLE — `$name` on a live record, `slug` on a file-lane one
-    // (`recordHandle`). ⛔ Until 2026-09-14 this read `slug` alone, so every record that
+    // ⭐ The record's HANDLE — `$name` (`recordHandle`), on every lane since 2026-09-27, when a
+    // file-lane record stopped carrying `slug`. ⛔ Until 2026-09-14 this read `slug` alone, so every record that
     // arrived with `$name` and no `slug` got ONE id, `record:<group>:`, and — with no
     // `pattern` — one route, `{route}/`: an entry per record, all opening the list.
     const slug = recordHandle(item) || item.id || String(item.title || '').toLowerCase().replace(/\s+/g, '-')
@@ -167,7 +166,8 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
 function searchableKeys(item) {
   if (!item || typeof item !== 'object') return []
   return Object.keys(item).filter(
-    (k) => !WIRING_KEYS.has(k) && typeof item[k] === 'string' && item[k].trim() !== '',
+    // A `$` key is the system's — `$uuid`, `$name` — never the record's content.
+    (k) => !k.startsWith('$') && !WIRING_KEYS.has(k) && typeof item[k] === 'string' && item[k].trim() !== '',
   )
 }
 
@@ -210,7 +210,7 @@ function pickDisplayFields(item) {
   if (!item || typeof item !== 'object') return {}
   const out = {}
   for (const [k, v] of Object.entries(item)) {
-    if (WIRING_KEYS.has(k)) continue
+    if (k.startsWith('$') || WIRING_KEYS.has(k)) continue
     if (v == null || !isPrimitive(v)) continue
     if (typeof v === 'string' && v.length > DISPLAY_VALUE_MAX) continue
     out[k] = v

@@ -130,8 +130,8 @@ describe('recordRoutes', () => {
 describe('a record search entry fills its URL from the page\'s pattern (2026-09-14)', async () => {
   const { generateRecordSearchIndex } = await import('../src/search/records.js')
   const records = [
-    { slug: 'river-survey', title: 'River survey', path: 'field' },
-    { slug: 'welcome', title: 'Welcome', path: '' },
+    { $name: 'river-survey', title: 'River survey', path: 'field' },
+    { $name: 'welcome', title: 'Welcome', path: '' },
     { title: 'No handle' },
   ]
 
@@ -143,12 +143,12 @@ describe('a record search entry fills its URL from the page\'s pattern (2026-09-
 
   it('a `[slug]` page — and a record\'s own `route` field is the author\'s, never its URL', () => {
     const [entry] = recordRoutes(site([list('/blog', 'articles'), { route: '/blog/:slug', parent: '/blog', isDynamic: true }]))
-    const index = generateRecordSearchIndex('articles', entry, [{ slug: 'a post', title: 'A', route: 'north-trail' }], 'en')
+    const index = generateRecordSearchIndex('articles', entry, [{ $name: 'a post', title: 'A', route: 'north-trail' }], 'en')
     expect(index.entries[0].route).toBe('/blog/a%20post')
   })
 
-  it('CONTROL — without a pattern, the older composition stands: the record\'s `route`, else `{route}/{slug}`', () => {
-    const index = generateRecordSearchIndex('articles', { route: '/blog' }, [{ slug: 'x', title: 'X' }, { slug: 'y', title: 'Y', route: '/baked/y' }], 'en')
+  it('CONTROL — without a pattern, the older composition stands: the record\'s `route`, else `{route}/{$name}`', () => {
+    const index = generateRecordSearchIndex('articles', { route: '/blog' }, [{ $name: 'x', title: 'X' }, { $name: 'y', title: 'Y', route: '/baked/y' }], 'en')
     expect(index.entries.map((e) => e.route)).toEqual(['/blog/x', '/baked/y'])
   })
 })
