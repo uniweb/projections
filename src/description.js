@@ -50,6 +50,7 @@ export function resolvePageDescription(page, { maxChars = 200 } = {}) {
  */
 function deriveDescription(page, { maxChars }) {
   for (const section of page?.sections || []) {
+    if (section?.hidden) continue // a draft section — `collectSection`, markdown.js
     const summary = docSummaryText(section?.content, { maxChars })
     if (summary) return summary
   }

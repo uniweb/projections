@@ -66,6 +66,7 @@ export function extractSearchContent(siteContent, options = {}) {
     // Extract section-level entries
     if (includeSections) {
       for (const section of page.sections || []) {
+        if (section?.hidden) continue // a draft section — `collectSection`, markdown.js
         const sectionEntries = extractFromSection(section, page, {
           includeHeadings,
           includeParagraphs,
@@ -231,6 +232,7 @@ function extractFromSection(section, page, options, ancestorAnchor) {
   // grandchild is no more rendered than its parent, and inheriting only one
   // level would put it back to naming an id that does not exist.
   for (const subsection of section.subsections || []) {
+    if (subsection?.hidden) continue // a draft child section
     const subEntries = extractFromSection(subsection, page, options, anchor)
     entries.push(...subEntries)
   }

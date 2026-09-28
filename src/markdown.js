@@ -96,6 +96,9 @@ export function collectPageBlocks(page, { includeChildren = true } = {}) {
  * @param {string|null} ancestorAnchor
  */
 function collectSection(section, blocks, includeChildren, ancestorAnchor) {
+  // A draft section (`hidden: true`) is not published content, whichever payload carries it —
+  // the same rule as a hidden page. Its child sections go with it.
+  if (section?.hidden) return
   const anchor = ancestorAnchor || sectionDomId(section)
   const markdown = serializeSectionContent(section)
   if (markdown) blocks.push({ anchor, markdown })
