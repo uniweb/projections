@@ -16,8 +16,11 @@
  *   the caption in `attrs.alt`, the component in `attrs.component`. Content keeps
  *   this shape since 2026-09-27; `@uniweb/core` lifts it when it builds a Block.
  * - **`inset_placeholder`** — `{ refId, embedKind }` in the body, with the caption in
- *   the section's `insets[]`. The build split insets this way until 2026-09-27, so a
- *   document stored before then still carries it.
+ *   the section's `insets[]`. The build split insets this way until 2026-09-27. ⛔ It
+ *   drops here: no store serves that `insets[]` since the site-content Model dropped
+ *   the field (2026-09-28), so its caption is not reachable, and a site pushed again
+ *   carries `inset_ref`. *(Until 2026-09-28 this took the `insets[]` as a second
+ *   argument and resolved the placeholder's caption from it.)*
  *
  * ## Why this is not "restore the inset"
  *
@@ -41,18 +44,10 @@
  * unresolved here would leak the component name into the `.md`.
  *
  * @param {Object} content - the section's ProseMirror document
- * @param {Array} [insets] - the section's `insets[]` (`{ refId, title }`), when stored
  * @returns {Object} content with every inset resolved to its caption, or dropped
  */
-export function resolveInsetCaptions(content, insets) {
+export function resolveInsetCaptions(content) {
   if (!content?.content?.length) return content
-  // No insets array → nothing to resolve against. Dropping is then still the only
-  // option, but it is silent: the caption is genuinely not reachable from here.
-  const titleByRef = new Map(
-    (Array.isArray(insets) ? insets : [])
-      .filter((i) => i && typeof i.refId === 'string' && i.title)
-      .map((i) => [i.refId, String(i.title)])
-  )
 
   // ⛔ THE REPLACEMENT'S SHAPE DEPENDS ON WHERE IT SITS, and getting this wrong
   // fails SILENTLY IN THE WORSE DIRECTION: a bare text node at block level is not
@@ -65,10 +60,9 @@ export function resolveInsetCaptions(content, insets) {
     nodes.flatMap((node) => {
       if (!node) return []
       if (node.type === 'inset_placeholder' || node.type === 'inset_ref') {
-        const title =
-          node.type === 'inset_ref'
-            ? typeof node.attrs?.alt === 'string' && node.attrs.alt
-            : titleByRef.get(node.attrs?.refId)
+        // ⛔ An `inset_placeholder` has no caption to give: the stored `insets[]` it pointed
+        // into is gone (the site-content Model dropped it, 2026-09-28), so it drops.
+        const title = node.type === 'inset_ref' && typeof node.attrs?.alt === 'string' && node.attrs.alt
         // An inset with no caption contributes no author text — drop it, and do
         // so quietly: there is nothing a reader is missing.
         if (!title) return []

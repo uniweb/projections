@@ -116,5 +116,5 @@ function collectSection(section, blocks, includeChildren, ancestorAnchor) {
 function serializeSectionContent(section) {
   const content = section?.content
   if (!content?.content?.length) return ''
-  return proseMirrorToMarkdown(resolveInsetCaptions(content, section?.insets)).trim()
+  return proseMirrorToMarkdown(resolveInsetCaptions(content)).trim()
 }
