@@ -297,7 +297,11 @@ export function groupPagesForIndex(pages = [], { exclude = [], branch = null } =
  * Translate a route into a locale's URL segments.
  *
  * Mirrors the sitemap's behavior so an agent index and a sitemap never
- * disagree about where a localized page lives.
+ * disagree about where a localized page lives. A route with no entry of its
+ * own takes its nearest translated ancestor's: the longest entry that is a
+ * prefix of it, as `@uniweb/core`'s `translateRoute` does. Until 2026-10-01
+ * the first entry in page order won, so `/docs/intro/step` under `/docs` and
+ * `/docs/intro` kept `intro` untranslated.
  *
  * @param {string} route
  * @param {string} locale
@@ -308,12 +312,11 @@ export function applyRouteTranslation(route, locale, routeTranslations) {
   const localeMap = routeTranslations?.[locale]
   if (!localeMap) return route
   if (localeMap[route]) return localeMap[route]
+  let best = null
   for (const [canonical, translated] of Object.entries(localeMap)) {
-    if (route.startsWith(`${canonical}/`)) {
-      return translated + route.slice(canonical.length)
-    }
+    if (route.startsWith(`${canonical}/`) && (!best || canonical.length > best[0].length)) best = [canonical, translated]
   }
-  return route
+  return best ? best[1] + route.slice(best[0].length) : route
 }
 
 /**

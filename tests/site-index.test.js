@@ -199,6 +199,14 @@ describe('renderSiteIndex — localization', () => {
     const output = renderSiteIndex(content, { locale: 'es', defaultLocale: 'en' })
     expect(output).toContain('(/es/acerca.md)')
   })
+
+  test('a page below translated pages takes its nearest translated ancestor\'s segments', () => {
+    // ⛔ Until 2026-10-01 the first entry in page order won: `/docs/intro/step` → `/documentos/intro/step`.
+    const nested = [page('/docs', { title: 'Docs' }), page('/docs/intro', { title: 'Intro' }), page('/docs/intro/step', { title: 'Step' })]
+    const content = site(nested, { i18n: { routeTranslations: { es: { '/docs': '/documentos', '/docs/intro': '/documentos/introduccion' } } } })
+    const output = renderSiteIndex(content, { locale: 'es', defaultLocale: 'en' })
+    expect(output).toContain('(/es/documentos/introduccion/step.md)')
+  })
 })
 
 describe('renderSiteIndex — descriptions are plain text', () => {
