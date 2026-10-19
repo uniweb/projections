@@ -177,8 +177,7 @@ describe('no schema claims — a collection that is not a blog', () => {
     // ⭐ Why that matters beyond tidiness: a host calls `generateRecordSearchIndex`
     // per request at the edge, over live records our build never sees, and keys a
     // cache on the entry shape. `searchableKeys` moves the VALUE of `content`, not
-    // its shape, so the surface contract's key-path diff cannot see it either
-    // (`_contracts/surface/probes.js` says so at the `.undeclared` probe). This
+    // its shape, so the surface contract's key-path diff cannot see it either. This
     // assertion is the only thing that turns such a change into a red test at OUR
     // commit — which is what lets us tell that host before they serve stale entries
     // as current. Change it deliberately, and say so in the commit body.
