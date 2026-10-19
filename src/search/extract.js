@@ -285,8 +285,10 @@ function extractFromProseMirrorDoc(doc, options) {
       const text = extractTextFromNode(node)
       if (!text) return
 
-      // First H1 becomes the title
-      if (!foundFirstHeading && node.attrs?.level === 1) {
+      // First H1 becomes the title — never a `#>` label line, a level-1 heading with
+      // `role: "pretitle"` that comes before it. ⛔ Until 2026-10-19 the label won, and a
+      // docs site's search listed "Guides" for every page under that label.
+      if (!foundFirstHeading && node.attrs?.level === 1 && node.attrs?.role !== 'pretitle') {
         title = text
         foundFirstHeading = true
       }
