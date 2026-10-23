@@ -71,6 +71,22 @@ describe('recordRoutes', () => {
     expect(out.every((entry) => !entry.route.includes(':'))).toBe(true)
   })
 
+  it('⛔ a parametric page nested inside a parametric one contributes nothing — its base still holds a parameter', () => {
+    // `/members/:slug/:pub` ends in a parameter, so it addresses a record — but a record OF a
+    // record: its URL needs the member's slug, which a publication does not carry. Its base,
+    // `/members/:slug`, is no base a record's URL composes onto. Reported by hosting 2026-09-12
+    // (and `/blog/:slug/revisions/:rev`); returned until 2026-10-23, and dropped by their guard.
+    const content = site([
+      list('/members', 'people'),
+      { route: '/members/:slug', parent: '/members', isDynamic: true },
+      { route: '/members/:slug/:pub', parent: '/members/:slug', isDynamic: true, fetch: { query: 'pubs', as: 'pubs' } },
+      { route: '/blog/:slug/revisions/:rev', isDynamic: true, fetch: { query: 'revisions', as: 'revisions' } },
+    ])
+    const out = recordRoutes(content)
+    expect(out.map((entry) => entry.name)).toEqual(['people'])
+    expect(out.every((entry) => !entry.route.includes(':'))).toBe(true)
+  })
+
   it('a page that only fetches to render itself contributes nothing', () => {
     expect(recordRoutes(site([list('/', 'articles'), list('/team', 'people')]))).toEqual([])
   })

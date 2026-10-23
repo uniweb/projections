@@ -15,8 +15,9 @@
  *
  *   - **which pages** — `recordRouteBase` (`@uniweb/core/route-match`): a page whose
  *     route ENDS in a parameter addresses one record; its base is the route minus
- *     that segment. A nested parametric page (`/members/:slug/cv`) and a static page
- *     both contribute nothing;
+ *     that segment. A page nested inside a parametric one contributes nothing — a static
+ *     one (`/members/:slug/cv`), and a parametric one (`/members/:slug/:pub`), whose base
+ *     still holds a parameter no record fills — and nor does a static page;
  *   - **which query** — `routeQuery` (`@uniweb/core/fetch-config`): the page's own
  *     query, else its parent page's, else — for a top-level page — the site's, else the
  *     key its own sections share. The same rule the runtime narrows by, so the name
@@ -25,7 +26,7 @@
  * @module
  */
 
-import { parentRouteOf, recordRouteBase, routeFieldOf } from '@uniweb/core/route-match'
+import { isDynamicRoute, parentRouteOf, recordRouteBase, routeFieldOf } from '@uniweb/core/route-match'
 import { routeQuery, sectionFetches, siteReaches } from '@uniweb/core/fetch-config'
 
 /**
@@ -73,6 +74,11 @@ export function recordRoutes(content) {
     if (!page?.route) continue
     const base = recordRouteBase(page.route)
     if (base === null) continue
+    // ⛔ A base that still holds a parameter — `/members/:slug` for `/members/:slug/:pub` — is no
+    // base a record's URL composes onto: the page addresses a record OF a record, and the record
+    // names its own segment, never its parent's. Reported by hosting 2026-09-12; returned until
+    // 2026-10-23, when their guard was still dropping it.
+    if (isDynamicRoute(base)) continue
     const parentRoute = parentRouteOf(page.route, { declared: page.parent ?? null, has })
     const parent = parentRoute ? byRoute.get(parentRoute) : null
     const query = routeQuery({
