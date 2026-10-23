@@ -197,6 +197,23 @@ describe('no schema claims — a collection that is not a blog', () => {
     expect(selected.sort()).toEqual(['department', 'name'])
   })
 
+  test('an ADDRESS is not prose — a URL or a path is never indexed, whatever field holds it', () => {
+    // A claim about the value's form, so no field is named: the same values a host had dropped by
+    // name (`url`, `href`, `path`) are dropped here because they ARE addresses (2026-10-23).
+    const record = {
+      $name: 'launch',
+      headline: 'Update: we shipped',
+      url: 'https://example.com/launch',
+      contact: 'mailto:press@example.com',
+      cover: '/covers/launch.svg',
+      folder: '../shared/launch',
+      slug: 'launch-post',
+    }
+    const entry = generateRecordSearchIndex('news', {}, [record], 'en').entries[0]
+    // A colon in prose is not a scheme, and a handle-like word is still the author's text.
+    expect(entry.content).toBe('Update: we shipped launch-post')
+  })
+
   test('CONTROL — a non-string value is not indexed, and that is not a WIRING_KEYS rule', () => {
     // `tenured: true` is excluded because a boolean is not searchable text, not
     // because we named it. Conflating the two reasons is how a future edit

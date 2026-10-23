@@ -55,6 +55,19 @@ function recordRoute(config, item, slug) {
  */
 const WIRING_KEYS = new Set(['id', 'route', 'image'])
 
+/**
+ * A string that is an ADDRESS — one token that is a URL with a scheme (`https://…`, `mailto:…`)
+ * or a path (`/covers/a.svg`, `./a`, `../a`) — rather than prose a visitor types into a search
+ * box. ⭐ A claim about the value's FORM, never about what an author's field means, so it names
+ * no field. A host indexing live records had excluded `url`, `href` and `path` by name (hosting,
+ * 2026-10-23); this reaches the values it measured without guessing at anyone's schema.
+ */
+function isAddress(value) {
+  const s = value.trim()
+  if (/\s/.test(s)) return false
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(s) || /^(mailto|tel):/i.test(s) || /^\.{0,2}\//.test(s)
+}
+
 /** A value a card can render — anything else is structure we cannot interpret. */
 const isPrimitive = (v) =>
   typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
@@ -160,14 +173,20 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
 }
 
 /**
- * Every non-empty string the author wrote, minus our own wiring keys — the
- * default searchable surface when a collection declares no `search.fields`.
+ * Every non-empty string the author wrote, minus our own wiring keys and minus addresses — the
+ * default searchable surface when a query's config declares no `search.fields`. One rule for a
+ * build's records and a host's live ones, so a host passes no list of its own.
  */
 function searchableKeys(item) {
   if (!item || typeof item !== 'object') return []
   return Object.keys(item).filter(
     // A `$` key is the system's — `$uuid`, `$name` — never the record's content.
-    (k) => !k.startsWith('$') && !WIRING_KEYS.has(k) && typeof item[k] === 'string' && item[k].trim() !== '',
+    (k) =>
+      !k.startsWith('$') &&
+      !WIRING_KEYS.has(k) &&
+      typeof item[k] === 'string' &&
+      item[k].trim() !== '' &&
+      !isAddress(item[k]),
   )
 }
 
