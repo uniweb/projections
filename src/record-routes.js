@@ -8,7 +8,7 @@
  * lane published the site — and a field cannot fail loudly when a producer stops
  * emitting it. A function over content cannot have that problem: both lanes emit the
  * content, and a changed rule reaches every caller with the code.
- * *(Asked for by hosting, 2026-09-12, for `/_search`, `llms.txt` and per-page `.md`,
+ * *(Asked for by a host, 2026-09-12, for its search, `llms.txt` and per-page `.md`,
  * where a wrong base route is a link that ranks correctly and 404s on click.)*
  *
  * The rule, in two parts, each owned elsewhere so nothing is re-derived here:
@@ -50,7 +50,7 @@ import { routeQuery, sectionFetches, siteReaches } from '@uniweb/core/fetch-conf
  *   templates a filename out of the key is betting that the key and the compiled
  *   file's basename are the same string — true today, and a promise between two of
  *   our conventions rather than a mechanism. Returning the authored path makes the
- *   `/data/` convention ours to keep and theirs to read (hosting, 2026-09-12).
+ *   `/data/` convention ours to keep and a host's to read (2026-09-12).
  *   ⛔ **Absent when the query has no compiled file** — a records-service project, or
  *   an external query (one declaring `url:`, whose records are its address's). A
  *   consumer's static arm should read that as *no file to read*, not as a name to guess.
@@ -76,8 +76,8 @@ export function recordRoutes(content) {
     if (base === null) continue
     // ⛔ A base that still holds a parameter — `/members/:slug` for `/members/:slug/:pub` — is no
     // base a record's URL composes onto: the page addresses a record OF a record, and the record
-    // names its own segment, never its parent's. Reported by hosting 2026-09-12; returned until
-    // 2026-10-23, when their guard was still dropping it.
+    // names its own segment, never its parent's. Reported by a host 2026-09-12; returned until
+    // 2026-10-23, when that host was still dropping it with a guard of its own.
     if (isDynamicRoute(base)) continue
     const parentRoute = parentRouteOf(page.route, { declared: page.parent ?? null, has })
     const parent = parentRoute ? byRoute.get(parentRoute) : null

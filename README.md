@@ -123,7 +123,12 @@ root-relative link still resolves for an agent that arrived via the index.
 `applyRouteTranslation`, `isContainer`, `isDynamicTemplate`.
 
 **Config and filenames** — `resolveAgentsConfig`, `pageMarkdownFilename`,
-`INDEX_FILENAME`.
+`markdownFilenameRoute` (its inverse), `INDEX_FILENAME`.
+
+**Answering a markdown request** — `resolveMarkdownRequest(content, path, context?)`, for a
+server that serves the `.md` links `renderSiteIndex` makes. It returns what `resolveRoute`
+(`@uniweb/core/resolve-route`) returns for the page the path names: `/fr/index.md` is the
+French root, and a redirect goes to the markdown of the page it goes to.
 
 The internal vocabulary is *projections*. `llms.txt` is one emitter's filename —
 a third-party convention that may not survive — so it appears exactly once, in
@@ -131,7 +136,7 @@ a third-party convention that may not survive — so it appears exactly once, in
 
 **Search** — also available from the `@uniweb/projections/search` subpath:
 `generateSearchIndex`, `extractSearchContent`, `generateRecordSearchIndex`,
-`mergeSearchIndexes`, `isSearchEnabled`, `getSearchConfig`, `getSearchIndexFilename`.
+`mergeSearchIndexes`, `getSearchConfig`, `getSearchIndexFilename`.
 
 > **Renamed in 0.5.0** — `generateCollectionIndex` is now `generateRecordSearchIndex`, and a
 > search entry carries `type: 'record'` / `group` / `id: "record:<group>:<slug>"` where it

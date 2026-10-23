@@ -30,7 +30,7 @@ function recordRoute(config, item, slug) {
   if (typeof config?.pattern === 'string' && config.pattern) {
     // ⛔ A pattern whose base still holds a parameter — `/members/:slug/:pub` — addresses a
     // record OF a record, and one record cannot fill it: no route, as for a nested page in
-    // `recordRoutes`. Measured by hosting on the declared arm, 2026-10-23.
+    // `recordRoutes`. Measured by a host on the declared arm, 2026-10-23.
     // A pattern that does not end in a parameter names no record at all.
     const base = recordRouteBase(config.pattern)
     if (base === null || isDynamicRoute(base)) return undefined
@@ -67,8 +67,8 @@ const WIRING_KEYS = new Set(['id', 'route', 'image'])
  * A string that is an ADDRESS — one token that is a URL with a scheme (`https://…`, `mailto:…`)
  * or a path (`/covers/a.svg`, `./a`, `../a`) — rather than prose a visitor types into a search
  * box. ⭐ A claim about the value's FORM, never about what an author's field means, so it names
- * no field. A host indexing live records had excluded `url`, `href` and `path` by name (hosting,
- * 2026-10-23); this reaches the values it measured without guessing at anyone's schema.
+ * no field. A host indexing live records had excluded `url`, `href` and `path` by name
+ * (2026-10-23); this reaches the values it measured without guessing at anyone's schema.
  */
 function isAddress(value) {
   const s = value.trim()
@@ -110,7 +110,7 @@ const DISPLAY_VALUE_MAX = 200
  *
  * ✅ The RESULT was renamed to match, 2026-08-27 — `type: 'record'`, `group: name`,
  * `id: "record:<group>:<slug>"`. That was a real data break against two live
- * consumers (kit's endpoint search provider and hosting's search), taken
+ * consumers (kit's endpoint search provider and a host's search), taken
  * deliberately rather than left to rot: doing it while the shape was already
  * being discussed cost one coordinated change; leaving it would have made the
  * entry the last place `collection` survived as a lane-crossing word.
@@ -143,8 +143,8 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
     // ⭐ A record nothing can address is LEFT OUT: an index lists what a visitor can open, and a
     // result with no route links nowhere — as the string "undefined/my-post" would, ranking
     // correctly and 404ing on click. ⛔ Until 2026-10-23 its entry was kept with no `route`, for a
-    // consumer to detect, so each consumer needed a guard of its own [hosting, measured that day:
-    // `mergeSearchIndexes` passed the entry through].
+    // consumer to detect, so each consumer needed a guard of its own (measured by a host that day:
+    // `mergeSearchIndexes` passed the entry through).
     const route = recordRoute(config, item, slug)
     if (!route) return []
     return [{

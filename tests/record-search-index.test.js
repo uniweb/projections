@@ -83,7 +83,7 @@ describe('the link — the record’s own route wins', () => {
   })
 
   // ⛔ A base that still holds a parameter is no address for one record: `/blog/:slug` + a
-  // handle is `/blog/:slug/hello`, a link that ranks and 404s. Measured by hosting on a site's
+  // handle is `/blog/:slug/hello`, a link that ranks and 404s. Measured by a host on a site's
   // declared `config.queries` — the arm `recordRoutes` does not reach — 2026-10-23.
   test('leaves out a record when the declared base or pattern still holds a parameter', () => {
     const bare = [{ $name: 'hello', title: 'Hello' }]

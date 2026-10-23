@@ -4,7 +4,7 @@ import { pageMarkdownFilename, markdownFilenameRoute } from '../src/index.js'
 /**
  * A page's markdown projection is named for its route (`pageMarkdownFilename`), and a host that
  * answers a request for one asks the way back (`markdownFilenameRoute`) rather than keeping its own
- * mapping — asked for by hosting, 2026-10-23.
+ * mapping — asked for by a host, 2026-10-23.
  */
 describe('markdownFilenameRoute — the inverse of pageMarkdownFilename', () => {
   it('names the route a projection is for, from a request path or a filename', () => {

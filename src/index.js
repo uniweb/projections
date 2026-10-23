@@ -45,6 +45,10 @@ export {
   resolveAgentsConfig,
 } from './config.js'
 
+// What a request for a page's markdown names, for a host that answers the links the site index
+// makes: `resolveRoute`'s answer for that page, with a redirect sent to its target's markdown.
+export { resolveMarkdownRequest } from './markdown-request.js'
+
 export {
   selectIndexablePages,
   selectIndexBranches,

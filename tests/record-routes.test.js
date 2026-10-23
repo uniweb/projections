@@ -3,7 +3,7 @@ import { recordRoutes } from '../src/record-routes.js'
 
 /**
  * `recordRoutes(content)` — which queries become detail pages, and the base a
- * record's URL composes onto. Asked for by hosting (2026-09-12) to replace a read
+ * record's URL composes onto. Asked for by a host (2026-09-12) to replace a read
  * of `page.parentSchema`, a field with two producers whose presence depended on
  * which lane published the site.
  *
@@ -74,8 +74,8 @@ describe('recordRoutes', () => {
   it('⛔ a parametric page nested inside a parametric one contributes nothing — its base still holds a parameter', () => {
     // `/members/:slug/:pub` ends in a parameter, so it addresses a record — but a record OF a
     // record: its URL needs the member's slug, which a publication does not carry. Its base,
-    // `/members/:slug`, is no base a record's URL composes onto. Reported by hosting 2026-09-12
-    // (and `/blog/:slug/revisions/:rev`); returned until 2026-10-23, and dropped by their guard.
+    // `/members/:slug`, is no base a record's URL composes onto. Reported by a host 2026-09-12
+    // (and `/blog/:slug/revisions/:rev`); returned until 2026-10-23, and dropped by the host's guard.
     const content = site([
       list('/members', 'people'),
       { route: '/members/:slug', parent: '/members', isDynamic: true },
