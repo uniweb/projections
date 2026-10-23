@@ -81,6 +81,20 @@ describe('the link — the record’s own route wins', () => {
     expect(index.entries[0]).not.toHaveProperty('route')
     expect(JSON.stringify(index)).not.toContain('undefined')
   })
+
+  // ⛔ A base that still holds a parameter is no address for one record: `/blog/:slug` + a
+  // handle is `/blog/:slug/hello`, a link that ranks and 404s. Measured by hosting on a site's
+  // declared `config.queries` — the arm `recordRoutes` does not reach — 2026-10-23.
+  test('omits route when the declared base or pattern still holds a parameter', () => {
+    const bare = [{ $name: 'hello', title: 'Hello' }]
+    const declaredBase = generateRecordSearchIndex('posts', { route: '/blog/:slug' }, bare, 'en')
+    expect(declaredBase.entries[0]).not.toHaveProperty('route')
+    const nestedPattern = generateRecordSearchIndex('pubs', { pattern: '/members/:slug/:pub' }, bare, 'en')
+    expect(nestedPattern.entries[0]).not.toHaveProperty('route')
+    // CONTROL: a pattern whose base is plain fills as before.
+    const plain = generateRecordSearchIndex('posts', { pattern: '/blog/:slug' }, bare, 'en')
+    expect(plain.entries[0].route).toBe('/blog/hello')
+  })
 })
 
 /**

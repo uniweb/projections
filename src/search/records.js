@@ -6,7 +6,7 @@
  * per-record detail files into each item before calling this function.
  */
 
-import { fillRoutePattern, recordHandle, recordTitle } from '@uniweb/core/route-match'
+import { fillRoutePattern, isDynamicRoute, recordHandle, recordRouteBase, recordTitle } from '@uniweb/core/route-match'
 
 /**
  * A record's URL, for the search entry.
@@ -28,10 +28,18 @@ import { fillRoutePattern, recordHandle, recordTitle } from '@uniweb/core/route-
  */
 function recordRoute(config, item, slug) {
   if (typeof config?.pattern === 'string' && config.pattern) {
+    // ⛔ A pattern whose base still holds a parameter — `/members/:slug/:pub` — addresses a
+    // record OF a record, and one record cannot fill it: no route, as for a nested page in
+    // `recordRoutes`. Measured by hosting on the declared arm, 2026-10-23.
+    // A pattern that does not end in a parameter names no record at all.
+    const base = recordRouteBase(config.pattern)
+    if (base === null || isDynamicRoute(base)) return undefined
     return fillRoutePattern(config.pattern, item, { field: config.field ?? null }) ?? undefined
   }
   if (item.route) return item.route
   if (typeof config?.route !== 'string' || config.route === '') return undefined
+  // The same for a declared base: `/blog/:slug` + a handle is no URL a visitor can open.
+  if (isDynamicRoute(config.route)) return undefined
   return `${config.route.replace(/\/$/, '')}/${slug}`
 }
 
