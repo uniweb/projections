@@ -157,7 +157,8 @@ describe('a record search entry fills its URL from the page\'s pattern (2026-09-
   it('⭐ a `[...path]` page: the record\'s URL is its handle, as `$route` has it', () => {
     const [entry] = recordRoutes(site([list('/logbook', 'logbook'), { route: '/logbook/:path*', parent: '/logbook', isDynamic: true }]))
     const index = generateRecordSearchIndex('logbook', entry, records, 'en')
-    expect(index.entries.map((e) => e.route)).toEqual(['/logbook/river-survey', '/logbook/welcome', undefined])
+    // A record with no handle fills no URL, and is left out of the index.
+    expect(index.entries.map((e) => e.route)).toEqual(['/logbook/river-survey', '/logbook/welcome'])
   })
 
   it('a `[slug]` page — and a record\'s own `route` field is the author\'s, never its URL', () => {

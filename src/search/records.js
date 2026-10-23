@@ -15,7 +15,7 @@ import { fillRoutePattern, isDynamicRoute, recordHandle, recordRouteBase, record
  * query, as `recordRoutes` returns it — the URL is that pattern FILLED from the record
  * (`fillRoutePattern`): the one encoder the runtime fills a rendered record's `$route`
  * with, so a search result and a card link to the same address. A record that cannot fill it
- * gets no route.
+ * gets no route, and `generateRecordSearchIndex` leaves it out.
  *
  * ⚠️ **Without it**, the older composition stands: the record's own `route`, else
  * `{config.route}/{handle}`, the handle being the record's `$name` (`recordHandle`). That was right while the build baked a `route` into
@@ -132,7 +132,7 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
     ? recordData
     : recordData?.items || []
 
-  const entries = items.map(item => {
+  const entries = items.flatMap(item => {
     const fields = declaredFields ?? searchableKeys(item)
     const content = fields.map(f => item[f] || '').filter(Boolean).join(' ')
     // ⭐ The record's HANDLE — `$name` (`recordHandle`), on every lane since 2026-09-27, when a
@@ -140,11 +140,14 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
     // arrived with `$name` and no `slug` got ONE id, `record:<group>:`, and — with no
     // `pattern` — one route, `{route}/`: an entry per record, all opening the list.
     const slug = recordHandle(item) || item.id || String(item.title || '').toLowerCase().replace(/\s+/g, '-')
-    // `route` is omitted entirely when nothing can supply one — a missing key is
-    // detectable by a consumer, where the string "undefined/my-post" is a link that
-    // ranks correctly, looks plausible, and 404s on click.
+    // ⭐ A record nothing can address is LEFT OUT: an index lists what a visitor can open, and a
+    // result with no route links nowhere — as the string "undefined/my-post" would, ranking
+    // correctly and 404ing on click. ⛔ Until 2026-10-23 its entry was kept with no `route`, for a
+    // consumer to detect, so each consumer needed a guard of its own [hosting, measured that day:
+    // `mergeSearchIndexes` passed the entry through].
     const route = recordRoute(config, item, slug)
-    return {
+    if (!route) return []
+    return [{
       // ⛔ RENAMED 2026-08-27 — `collection` is FRAMEWORK'S build concept (a named
       // set our build compiles to one file) and the live lane has no such thing:
       // a host calls this with records fetched from a folder. Same category error
@@ -157,7 +160,7 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
       id: `record:${name}:${slug}`,
       type: 'record',
       group: name,
-      ...(route ? { route } : {}),
+      route,
       // The rule the record's own page is titled by (`recordTitle`: `title`, `name`, the
       // handle), so a result and the page it opens are called the same thing.
       title: recordTitle(item) || slug,
@@ -167,7 +170,7 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
         : content,
       weight,
       item: pickDisplayFields(item),
-    }
+    }]
   })
 
   // No `generated` timestamp — see the note in `generate.js`. A clock defeats

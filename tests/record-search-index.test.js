@@ -73,24 +73,24 @@ describe('the link — the record’s own route wins', () => {
     expect(index.entries[0].route).toBe('/blog/my-post')
   })
 
-  // A missing key is detectable; "undefined/my-post" is a link that ranks
-  // correctly, looks plausible in results, and 404s on click.
-  test('omits route entirely when neither source can supply one', () => {
-    const bare = [{ slug: 'my-post', title: 'My Post' }]
+  // An index lists what a visitor can open: a result with no route links nowhere, and
+  // "undefined/my-post" is a link that ranks correctly, looks plausible, and 404s on click.
+  test('leaves out a record when neither source can supply a route', () => {
+    const bare = [{ slug: 'my-post', title: 'My Post' }, { slug: 'other', title: 'Other', route: '/notes/other' }]
     const index = generateRecordSearchIndex('articles', { search: {} }, bare, 'en')
-    expect(index.entries[0]).not.toHaveProperty('route')
+    expect(index.entries.map((e) => e.id)).toEqual(['record:articles:other'])
     expect(JSON.stringify(index)).not.toContain('undefined')
   })
 
   // ⛔ A base that still holds a parameter is no address for one record: `/blog/:slug` + a
   // handle is `/blog/:slug/hello`, a link that ranks and 404s. Measured by hosting on a site's
   // declared `config.queries` — the arm `recordRoutes` does not reach — 2026-10-23.
-  test('omits route when the declared base or pattern still holds a parameter', () => {
+  test('leaves out a record when the declared base or pattern still holds a parameter', () => {
     const bare = [{ $name: 'hello', title: 'Hello' }]
     const declaredBase = generateRecordSearchIndex('posts', { route: '/blog/:slug' }, bare, 'en')
-    expect(declaredBase.entries[0]).not.toHaveProperty('route')
+    expect(declaredBase.entries).toEqual([])
     const nestedPattern = generateRecordSearchIndex('pubs', { pattern: '/members/:slug/:pub' }, bare, 'en')
-    expect(nestedPattern.entries[0]).not.toHaveProperty('route')
+    expect(nestedPattern.entries).toEqual([])
     // CONTROL: a pattern whose base is plain fills as before.
     const plain = generateRecordSearchIndex('posts', { pattern: '/blog/:slug' }, bare, 'en')
     expect(plain.entries[0].route).toBe('/blog/hello')
@@ -223,7 +223,7 @@ describe('no schema claims — a collection that is not a blog', () => {
       folder: '../shared/launch',
       slug: 'launch-post',
     }
-    const entry = generateRecordSearchIndex('news', {}, [record], 'en').entries[0]
+    const entry = generateRecordSearchIndex('news', { route: '/news' }, [record], 'en').entries[0]
     // A colon in prose is not a scheme, and a handle-like word is still the author's text.
     expect(entry.content).toBe('Update: we shipped launch-post')
   })
@@ -264,7 +264,7 @@ describe('no schema claims — a collection that is not a blog', () => {
       content: { type: 'doc', content: [] },
       tags: ['a', 'b'],
     }
-    const entry = generateRecordSearchIndex('things', {}, [heavy], 'en').entries[0]
+    const entry = generateRecordSearchIndex('things', { route: '/things' }, [heavy], 'en').entries[0]
 
     expect(entry.item.label).toBe('Short label')
     expect(entry.item).not.toHaveProperty('$name') // the system's
@@ -278,7 +278,7 @@ describe('no schema claims — a collection that is not a blog', () => {
     // The cap is a display-payload decision, not an indexing one — dropping it
     // from both would make long-form records unfindable.
     const heavy = { slug: 'x', body: 'needle '.repeat(80) }
-    const entry = generateRecordSearchIndex('things', {}, [heavy], 'en').entries[0]
+    const entry = generateRecordSearchIndex('things', { route: '/things' }, [heavy], 'en').entries[0]
 
     expect(entry.content).toContain('needle')
     expect(entry.item).not.toHaveProperty('body')
