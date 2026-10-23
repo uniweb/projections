@@ -40,6 +40,7 @@ export {
   DEFAULT_BRANCH_MIN_PAGES,
   AGENTS_KEYS,
   pageMarkdownFilename,
+  markdownFilenameRoute,
   branchIndexFilename,
   resolveAgentsConfig,
 } from './config.js'

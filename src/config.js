@@ -138,3 +138,21 @@ export function pageMarkdownFilename(route) {
   if (!route || route === '/') return 'index.md'
   return `${route.replace(/^\/+/, '').replace(/\/+$/, '')}.md`
 }
+
+/**
+ * The route a page's markdown projection is for — the inverse of `pageMarkdownFilename`, for a
+ * host answering a request for one: `/index.md` → `/`, `/blog.md` → `/blog`,
+ * `docs/authoring/collections.md` → `/docs/authoring/collections`. A leading slash is optional.
+ *
+ * ⚠️ `index.md` is the site root's, so a page whose own route is `/index` cannot be told from it;
+ * the forward function maps both there.
+ *
+ * @param {string} path - a request path or a projection's filename
+ * @returns {string|null} the route, or null for anything that is not a `.md` path
+ */
+export function markdownFilenameRoute(path) {
+  if (typeof path !== 'string' || !path.endsWith('.md')) return null
+  const name = path.replace(/^\/+/, '').slice(0, -'.md'.length)
+  if (!name || name.endsWith('/')) return null
+  return name === 'index' ? '/' : `/${name}`
+}
