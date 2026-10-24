@@ -36,16 +36,40 @@ export const BLOCK_SEPARATOR = '\n\n'
 /**
  * Render one page as markdown.
  *
- * @param {Object} page - A collected page (`siteContent.pages[n]`)
+ * ⭐ **A record's page** — one URL of a parametric page — is that page's markdown, then the
+ * record as JSON, as it was fetched: its fields as they are, with nothing guessed about how to
+ * word them. ⛔ Until 2026-10-23 a host composed this itself.
+ *
+ * @param {Object} page - A collected page (`siteContent.pages[n]`); for a record's page, the
+ *   parametric page
  * @param {Object} [options]
  * @param {boolean} [options.includeChildren=true] - Include nested sections
+ * @param {*} [options.record] - the record a parametric page's URL names
  * @returns {string} Markdown, or '' when the page has no projectable content
  */
-export function renderPageMarkdown(page, { includeChildren = true } = {}) {
-  return collectPageBlocks(page, { includeChildren })
+export function renderPageMarkdown(page, { includeChildren = true, record } = {}) {
+  const markdown = collectPageBlocks(page, { includeChildren })
     .map(block => block.markdown)
     .join(BLOCK_SEPARATOR)
     .trim()
+  if (record === undefined || record === null) return markdown
+  const json = jsonBlock(record)
+  return markdown ? `${markdown}${BLOCK_SEPARATOR}${json}` : json
+}
+
+/**
+ * A value as a fenced JSON block. The fence is longer than any run of backticks in the JSON, so
+ * a value holding one cannot close it early.
+ *
+ * @param {*} value
+ * @returns {string}
+ */
+function jsonBlock(value) {
+  const json = JSON.stringify(value, null, 2)
+  let longest = 0
+  for (const run of json.matchAll(/`+/g)) longest = Math.max(longest, run[0].length)
+  const fence = '`'.repeat(Math.max(3, longest + 1))
+  return `${fence}json\n${json}\n${fence}`
 }
 
 /**

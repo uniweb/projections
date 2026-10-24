@@ -111,13 +111,18 @@ const markdown = renderPageMarkdown(siteContent.pages[0])
 | Export | Signature |
 |---|---|
 | `renderSiteIndex` | `(siteContent, options?) → string` |
-| `renderPageMarkdown` | `(page, { includeChildren = true }?) → string` |
+| `renderPageMarkdown` | `(page, { includeChildren = true, record }?) → string` |
 | `resolvePageDescription` | `(page, { maxChars = 200 }?) → string` |
 
 `renderSiteIndex` options: `baseUrl`, `basePath`, `locale`, `defaultLocale`,
-`exclude`, `title`, `description`, `rootGroupTitle`, `maxDescriptionChars`.
+`exclude`, `title`, `description`, `rootGroupTitle`, `maxDescriptionChars`, `records`.
 Links are absolute when `baseUrl` is known and root-relative otherwise — a
 root-relative link still resolves for an agent that arrived via the index.
+
+**Record pages.** A parametric page (`/blog/:slug`) is never listed itself. Pass the record
+entries of a search index as `records` and each record's page is listed in its place. A
+record's page projects as `renderPageMarkdown(parametricPage, { record })`: the page's markdown,
+then the record as JSON.
 
 **Page graph** — `selectIndexablePages`, `groupPagesForIndex`, `buildPageUrl`,
 `applyRouteTranslation`, `isContainer`, `isDynamicTemplate`.

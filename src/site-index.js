@@ -35,6 +35,11 @@ const ROOT_GROUP_TITLE = 'Pages'
  *   is otherwise identical, so one renderer serves both — see
  *   {@link selectIndexBranches} for why a branch index is additive rather than a
  *   delegation.
+ * @param {Object[]} [options.records] - the record entries of a search index
+ *   (`generateRecordSearchIndex(...).entries`), for the pages a parametric page
+ *   makes of them. Each is listed as a page of the site after the site's own, titled
+ *   by its `title` and described by its `excerpt`, under the same exclusions. Content
+ *   holds the parametric page alone, which is never listed.
  * @returns {string} The index document
  */
 export function renderSiteIndex(siteContent, options = {}) {
@@ -72,7 +77,7 @@ export function renderSiteIndex(siteContent, options = {}) {
     lines.push('', ...blockquote(description))
   }
 
-  const groups = groupPagesForIndex(siteContent?.pages, { exclude, branch })
+  const groups = groupPagesForIndex(withRecordPages(siteContent?.pages, options.records), { exclude, branch })
 
   for (const group of groups) {
     const entries = group.pages
@@ -84,6 +89,23 @@ export function renderSiteIndex(siteContent, options = {}) {
   }
 
   return `${lines.join('\n')}\n`
+}
+
+/**
+ * The site's pages, then a page for each record entry that has a route — what a host listing a
+ * site's record pages hands in. ⛔ Until 2026-10-23 a host built these itself and appended them
+ * to the content's pages, so which page fields this reads was its to keep in step with.
+ *
+ * @param {Object[]} [pages]
+ * @param {Object[]} [records]
+ * @returns {Object[]}
+ */
+function withRecordPages(pages = [], records) {
+  if (!Array.isArray(records) || !records.length) return pages
+  const recordPages = records
+    .filter((entry) => entry?.type === 'record' && typeof entry.route === 'string' && entry.route)
+    .map((entry) => ({ route: entry.route, title: entry.title || '', description: entry.excerpt || '' }))
+  return recordPages.length ? [...(pages || []), ...recordPages] : pages
 }
 
 /**
