@@ -57,4 +57,15 @@ export {
   fuzzyTerms,
   fold,
   tokenize,
+  eachTerm,
+  matchRanges,
+  searchResult,
 } from './engine.js'
+
+// ── The result: one shape for every provider, and its snippet ──
+//
+// `searchResult` (above) turns an entry into one. These are its parts, for a client that
+// shapes a server's answer or renders a snippet itself, and they load no engine: also at
+// `@uniweb/projections/search/result` and `/search/snippet`.
+export { emptyResult } from './result.js'
+export { buildSnippet, highlightMatches } from './snippet.js'

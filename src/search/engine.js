@@ -62,11 +62,14 @@
  * `fuzzyTerms`) is this package's, and it is the one thing the contributed engine
  * did not have.
  *
- * ⭐ Zero dependencies and no platform APIs — no `node:*`, no DOM, no filesystem
- * — so it runs in a browser, in a build, and in a server isolate alike.
- * `tests/environment.test.js` walks the import graph and fails if that stops
- * being true.
+ * ⭐ No platform APIs — no `node:*`, no DOM, no filesystem — and no imports but
+ * the result shape and its snippet beside it, so it runs in a browser, in a
+ * build, and in a server isolate alike. `tests/environment.test.js` walks the
+ * import graph and fails if that stops being true.
  */
+
+import { emptyResult } from './result.js'
+import { buildSnippet } from './snippet.js'
 
 // ── BM25F parameters ────────────────────────────────────────────────────────
 const K1 = 1.2 // term-frequency saturation
@@ -128,44 +131,60 @@ export function fold(text) {
 /**
  * Text → terms.
  *
+ * @param {*} text
+ * @returns {string[]}
+ */
+export function tokenize(text) {
+  const out = []
+  eachTerm(fold(text), (term) => { out.push(term) })
+  return out
+}
+
+/**
+ * ⭐ **THE ONE TOKENIZER, with where each term sits** — over text already folded (`fold`).
+ * `tokenize` is this keeping the terms; a highlight keeps the offsets too (`matchRanges` in
+ * `./result.js`), so a result marks the terms the ranking matched, by the ranking's own rule.
+ *
  * ⛔ A run in a no-space script becomes BIGRAMS, not one token. `東京都` yields
  * `東京`, `京都` — so a query for either matches, which whitespace tokenization
  * cannot do at all. A single-character run still yields that character, or it
  * would be unfindable.
  *
- * @param {*} text
- * @returns {string[]}
+ * @param {string} folded
+ * @param {(term: string, start: number, end: number) => void} visit - each term, in order, with
+ *   its offsets in `folded` (UTF-16 code units, `end` exclusive)
  */
-export function tokenize(text) {
-  const folded = fold(text)
-  if (!folded) return []
-  const out = []
+export function eachTerm(folded, visit) {
+  if (!folded) return
   for (const m of folded.matchAll(WORD)) {
     const tok = m[0]
+    const at = m.index
     if (!NO_SPACE_SCRIPT.test(tok)) {
-      if (tok.length >= 2 || /\p{N}/u.test(tok)) out.push(tok)
+      if (tok.length >= 2 || /\p{N}/u.test(tok)) visit(tok, at, at + tok.length)
       continue
     }
     // Mixed runs are possible (`iPhone用`), so split into CJK / non-CJK spans.
     let span = ''
+    let spanAt = at
     const flush = () => {
       if (!span) return
       if (NO_SPACE_SCRIPT.test(span[0])) {
-        if (span.length === 1) out.push(span)
-        else for (let i = 0; i < span.length - 1; i++) out.push(span.slice(i, i + 2))
-      } else if (span.length >= 2 || /\p{N}/u.test(span)) out.push(span)
+        if (span.length === 1) visit(span, spanAt, spanAt + 1)
+        else for (let i = 0; i < span.length - 1; i++) visit(span.slice(i, i + 2), spanAt + i, spanAt + i + 2)
+      } else if (span.length >= 2 || /\p{N}/u.test(span)) visit(span, spanAt, spanAt + span.length)
       span = ''
     }
     let cjkSpan = null
+    let offset = at
     for (const ch of tok) {
       const isC = NO_SPACE_SCRIPT.test(ch)
       if (cjkSpan === null) cjkSpan = isC
-      if (isC !== cjkSpan) { flush(); cjkSpan = isC }
+      if (isC !== cjkSpan) { flush(); cjkSpan = isC; spanAt = offset }
       span += ch
+      offset += ch.length
     }
     flush()
   }
-  return out
 }
 
 /**
@@ -488,7 +507,11 @@ function selectTop(items, k) {
  * @param {boolean} [opts.prefix=true] - complete the last term as it is typed
  * @param {boolean} [opts.fuzzy=true] - fall back to near-misses when nothing matched
  * @returns {{hits: Array<{doc:number, score:number, fuzzy?:boolean}>, total:number,
- *            corrections?: Array<{term:string, to:string}>}}
+ *            terms?: string[], corrections?: Array<{term:string, to:string}>}}
+ *   `terms`, whenever anything matched: the dictionary terms it scored with — the query's
+ *   own and the completions of the word being typed, or the corrections — so a result
+ *   highlights what it matched by (`searchResult` in `./result.js`), never by a rule of
+ *   its own.
  *   `corrections` is present only when the fuzzy fallback answered — one entry per
  *   query term it substituted, the commonest candidate for each — so a caller can
  *   render *"showing results for form"*. **Absent, never empty**, so presence is
@@ -527,6 +550,7 @@ export function rankSearchEntries(structure, query, entries, opts = {}) {
   }
 
   let scores = score(weights)
+  let scored = weights
   let fuzzy = false
   let corrections = null
 
@@ -549,7 +573,10 @@ export function rankSearchEntries(structure, query, entries, opts = {}) {
     if (weighted.size) {
       scores = score(weighted)
       fuzzy = scores.size > 0
-      if (fuzzy) corrections = substitutes
+      if (fuzzy) {
+        corrections = substitutes
+        scored = weighted
+      }
     }
   }
   if (!scores.size) return { hits: [], total: 0 }
@@ -606,7 +633,7 @@ export function rankSearchEntries(structure, query, entries, opts = {}) {
     }
     if (boosted) head.sort(better)
   }
-  const out2 = { hits: limit ? head.slice(0, limit) : head, total }
+  const out2 = { hits: limit ? head.slice(0, limit) : head, total, terms: [...scored.keys()].map((id) => structure.terms[id]) }
   // ⛔ ABSENT when nothing was corrected, never `[]` — a consumer branching on
   // presence is the shape asked for, and an empty array reads as "corrected, to
   // nothing".
@@ -635,5 +662,127 @@ export function rankSearchEntries(structure, query, entries, opts = {}) {
       }
     }
     return acc
+  }
+}
+
+// ── The result a hit becomes ────────────────────────────────────────────────
+
+/** A character and the combining marks after it: the stretch of text one piece of a fold comes from. */
+const PIECE = /\P{M}\p{M}*|\p{M}+/uy
+
+/**
+ * Where `terms` occur in `text`, as `[start, end]` ranges into the ORIGINAL text, `end`
+ * inclusive (the shape `buildSnippet` reads), merged where they overlap or touch. They are
+ * found by this module's own fold and tokenizer, so `cafe` marks "Café" and a bigram marks
+ * its two characters.
+ *
+ * ⭐ **Pass the terms the ranking scored with** (`rankSearchEntries(...).terms`): the query's
+ * own, the completions of the word being typed, or the corrections. ⛔ A highlight that
+ * matched by a rule of its own disagreed with the ranking. A lowercase `indexOf` let `cafe`
+ * rank a page holding "café" and mark nothing in it (measured 2026-10-23).
+ *
+ * It runs for a result shown, never inside the ranking: offsets for every candidate would be
+ * the work inverting the index exists to avoid.
+ *
+ * ⚠️ **How an offset survives folding.** Folding changes lengths: `ﬁ` becomes `fi`, and a
+ * decomposed accent is dropped. So each folded character is traced to the piece of the original
+ * it came from, a character and its marks. Where the pieces' folds do not add up to the text's
+ * own fold, nothing is marked rather than the wrong characters: rare sequences compose across
+ * pieces. And a range is kept only when its original text folds to its term.
+ *
+ * @param {*} text
+ * @param {Iterable<string>} terms - folded terms, as the ranking returns them
+ * @returns {Array<[number, number]>}
+ */
+export function matchRanges(text, terms) {
+  const source = String(text == null ? '' : text)
+  const wanted = new Set(terms || [])
+  if (!source || !wanted.size) return []
+  const folded = fold(source)
+  const from = new Int32Array(folded.length)
+  const to = new Int32Array(folded.length)
+  // A piece's folded length, by piece: a script without spaces repeats its characters, and
+  // folding each one again was most of the cost (20,000 characters of Japanese: 5.6 ms).
+  const foldedLength = new Map()
+  let k = 0
+  for (let i = 0; i < source.length; ) {
+    // An ASCII character no mark follows folds to one character, itself lowercased. Every
+    // combining mark is at or above U+0300.
+    if (source.charCodeAt(i) < 128 && !(source.charCodeAt(i + 1) >= 0x300)) {
+      if (k >= folded.length) return []
+      from[k] = i
+      to[k] = i + 1
+      k++
+      i++
+      continue
+    }
+    PIECE.lastIndex = i
+    const piece = PIECE.exec(source)[0]
+    let n = foldedLength.get(piece)
+    if (n === undefined) foldedLength.set(piece, (n = fold(piece).length))
+    if (k + n > folded.length) return []
+    for (let j = 0; j < n; j++, k++) {
+      from[k] = i
+      to[k] = i + piece.length
+    }
+    i += piece.length
+  }
+  if (k !== folded.length) return []
+
+  const ranges = []
+  const foldOf = new Map()
+  eachTerm(folded, (term, start, end) => {
+    if (!wanted.has(term)) return
+    const a = from[start]
+    const b = to[end - 1]
+    const written = source.slice(a, b)
+    let again = foldOf.get(written)
+    if (again === undefined) foldOf.set(written, (again = fold(written)))
+    if (again !== term) return
+    const last = ranges[ranges.length - 1]
+    if (last && a <= last[1] + 1) last[1] = Math.max(last[1], b - 1)
+    else ranges.push([a, b - 1])
+  })
+  return ranges
+}
+
+/**
+ * ⭐ **THE RESULT A HIT BECOMES.** `entry` is an entry of the index (`generateSearchIndex`,
+ * `generateRecordSearchIndex`); the result is the shape every search provider returns
+ * (`emptyResult`, `./result.js`). Its snippet marks the terms the ranking scored with. A
+ * browser ranking a downloaded index and a server ranking the same entries both call this, so
+ * a result reads the same wherever it was answered.
+ *
+ * @param {Object} entry
+ * @param {Object} [options]
+ * @param {Iterable<string>} [options.terms] - `rankSearchEntries(...).terms`
+ * @returns {Object}
+ */
+export function searchResult(entry, { terms = [] } = {}) {
+  const e = entry && typeof entry === 'object' ? entry : {}
+  const route = typeof e.route === 'string' ? e.route : ''
+  const anchor = e.anchor ?? null
+  const text = typeof e.content === 'string' ? e.content : ''
+  const ranges = matchRanges(text, terms)
+  const matches = ranges.length ? [{ key: 'content', indices: ranges }] : null
+  const snippet = buildSnippet(text, matches, { key: 'content' })
+  return {
+    ...emptyResult(),
+    id: e.id ?? '',
+    type: e.type ?? '',
+    route,
+    href: anchor ? `${route}#${anchor}` : route,
+    title: e.title ?? '',
+    pageTitle: e.pageTitle ?? '',
+    excerpt: e.excerpt ?? '',
+    snippetHtml: snippet.html,
+    sectionId: e.sectionId ?? null,
+    anchor,
+    description: e.description ?? null,
+    component: e.component ?? null,
+    snippetText: snippet.text,
+    matches,
+    group: e.group ?? null,
+    item: e.item ?? null,
   }
 }

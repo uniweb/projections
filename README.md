@@ -138,6 +138,15 @@ a third-party convention that may not survive — so it appears exactly once, in
 `generateSearchIndex`, `extractSearchContent`, `generateRecordSearchIndex`,
 `mergeSearchIndexes`, `getSearchConfig`, `getSearchIndexFilename`.
 
+**Ranking and results** — from `@uniweb/projections/search`:
+- `buildSearchStructure` and `rankSearchEntries` index and rank the entries. A ranking says
+  which `terms` it scored with.
+- `searchResult(entry, { terms })` turns an entry into the result every search provider
+  returns. Its snippet marks those terms where the engine's own fold finds them, so `cafe`
+  marks "café". `matchRanges` gives the same ranges on their own.
+- `emptyResult`, `buildSnippet` and `highlightMatches` are its parts. They are also at
+  `/search/result` and `/search/snippet`, which load no engine.
+
 > **Renamed in 0.5.0** — `generateCollectionIndex` is now `generateRecordSearchIndex`, and a
 > search entry carries `type: 'record'` / `group` / `id: "record:<group>:<slug>"` where it
 > carried `type: 'collection'` / `collection` / `id: "collection:…"`. *"Collection" is a

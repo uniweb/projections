@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.js",
     "./search": "./src/search/index.js",
-    "./search/engine": "./src/search/engine.js"
+    "./search/engine": "./src/search/engine.js",
+    "./search/result": "./src/search/result.js",
+    "./search/snippet": "./src/search/snippet.js"
   },
   "files": [
     "src"
