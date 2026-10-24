@@ -44,6 +44,7 @@ export {
   branchIndexFilename,
   resolveAgentsConfig,
   acceptsOrigin,
+  originOf,
 } from './config.js'
 
 // What a request for a page's markdown names, for a host that answers the links the site index

@@ -37,9 +37,8 @@ describe('the cascade shape the build actually writes', () => {
     expect(index.entries[0].id).toBe('record:articles:my-post')
   })
 
-  test('still reads an { items } envelope, for a host that carries one', () => {
-    const index = generateRecordSearchIndex('articles', config, { items: emitted }, 'en')
-    expect(index.entries).toHaveLength(2)
+  test('refuses an { items } envelope, which no lane sends any more', () => {
+    expect(() => generateRecordSearchIndex('articles', config, { items: emitted }, 'en')).toThrow(/must be an array/)
   })
 
   test('an empty or absent collection yields no entries, not a throw', () => {

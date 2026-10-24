@@ -104,14 +104,21 @@ function expectedOriginsOf(value) {
   if (value === undefined || value === null) return null
   const out = []
   for (const entry of Array.isArray(value) ? value : [value]) {
-    const origin = httpOrigin(entry)
+    const origin = originOf(entry)
     if (origin && !out.includes(origin)) out.push(origin)
   }
   return out
 }
 
-/** An http(s) URL's origin, or null for anything else (including the `null` origin). */
-function httpOrigin(value) {
+/**
+ * The origin an `expectedOrigins` entry, or a request's `Origin`, names: an http(s) URL's origin,
+ * as a browser spells it. Null for anything else, the `null` origin included. `uniweb doctor`
+ * flags an entry this reads as null, which matches nothing.
+ *
+ * @param {*} value
+ * @returns {string|null}
+ */
+export function originOf(value) {
   if (typeof value !== 'string' || !value.trim()) return null
   let url
   try {
@@ -141,9 +148,9 @@ function httpOrigin(value) {
 export function acceptsOrigin(expectedOrigins, origin, { siteOrigins = [] } = {}) {
   if (expectedOrigins == null) return true
   if (origin === undefined || origin === null || origin === '') return true
-  const asked = httpOrigin(origin)
+  const asked = originOf(origin)
   if (!asked) return false
-  if (siteOrigins.some((own) => httpOrigin(own) === asked)) return true
+  if (siteOrigins.some((own) => originOf(own) === asked)) return true
   return expectedOrigins.includes(asked)
 }
 

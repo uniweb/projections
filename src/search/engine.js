@@ -755,6 +755,11 @@ export function matchRanges(text, terms) {
  * browser ranking a downloaded index and a server ranking the same entries both call this, so
  * a result reads the same wherever it was answered.
  *
+ * A page's entry carries no `excerpt` or `pageTitle` of its own. Its excerpt is its
+ * `description`, and the page a hit is on is the page itself, as a record's is its own page.
+ * ⛔ *A host shaped results with these two fallbacks and the browser without them, until
+ * 2026-10-24.*
+ *
  * @param {Object} entry
  * @param {Object} [options]
  * @param {Iterable<string>} [options.terms] - `rankSearchEntries(...).terms`
@@ -775,8 +780,8 @@ export function searchResult(entry, { terms = [] } = {}) {
     route,
     href: anchor ? `${route}#${anchor}` : route,
     title: e.title ?? '',
-    pageTitle: e.pageTitle ?? '',
-    excerpt: e.excerpt ?? '',
+    pageTitle: e.pageTitle ?? e.title ?? '',
+    excerpt: e.excerpt ?? e.description ?? '',
     snippetHtml: snippet.html,
     sectionId: e.sectionId ?? null,
     anchor,

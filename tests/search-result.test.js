@@ -97,3 +97,15 @@ describe('searchResult — the one shape', () => {
     expect(result).toMatchObject({ snippetHtml: 'Plain text.', snippetText: 'Plain text.', matches: null })
   })
 })
+
+describe("searchResult — a page's own excerpt and page title", () => {
+  it("a page's excerpt is its description, and the page a hit is on is itself", () => {
+    const result = searchResult({ id: 'page:/about', type: 'page', route: '/about', title: 'About', description: 'Who we are.', content: 'About Who we are.' })
+    expect(result).toMatchObject({ pageTitle: 'About', excerpt: 'Who we are.' })
+  })
+
+  it("keeps a section's own", () => {
+    const result = searchResult({ id: 's', type: 'section', route: '/about', title: 'Team', pageTitle: 'About', excerpt: 'Six people.', content: 'Six people.' })
+    expect(result).toMatchObject({ pageTitle: 'About', excerpt: 'Six people.' })
+  })
+})

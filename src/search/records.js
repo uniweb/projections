@@ -46,9 +46,10 @@ function recordRoute(config, item, slug) {
 /**
  * @param {string} name - Collection name (e.g. "articles")
  * @param {Object} config - Query config from the site payload (config.queries[name])
- * @param {Object[]|Object} recordData - Parsed cascade JSON (`data/{name}.json`),
- *   which the build writes as a bare array. The `{ items: [...] }` envelope is
- *   accepted too, since a host fetching the collection from a backend may carry one.
+ * @param {Object[]|null} recordData - the query's records: a compiled `data/{name}.json`, which
+ *   the build writes as a bare array, or `collectSiteRecords(...).records[name]`, which is one
+ *   too, or absent when that walk failed. ⛔ An `{ items }` envelope was accepted until
+ *   2026-10-24, for a lane that has retired.
  * @param {string} locale - Locale code (e.g. "en")
  * @returns {Object} Collection search index
  */
@@ -128,9 +129,12 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
   // has told us something we could not otherwise know.
   const declaredFields = Array.isArray(config.search?.fields) ? config.search.fields : null
   const weight = config.search?.weight ?? 0.7
-  const items = Array.isArray(recordData)
-    ? recordData
-    : recordData?.items || []
+  // Absent records are none: a walk that failed leaves its query's key out. Anything else that is
+  // no array is a caller's mistake, said aloud.
+  if (recordData != null && !Array.isArray(recordData)) {
+    throw new TypeError(`generateRecordSearchIndex: the records of '${name}' must be an array`)
+  }
+  const items = recordData || []
 
   const entries = items.flatMap(item => {
     const fields = declaredFields ?? searchableKeys(item)

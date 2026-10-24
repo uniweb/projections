@@ -97,7 +97,7 @@ describe('no ambient input', () => {
 
   test('a collection index carries no timestamp', () => {
     const config = { route: '/blog', search: { fields: ['title'] } }
-    const data = { items: [{ slug: 'a', title: 'Alpha' }] }
+    const data = [{ $name: 'a', title: 'Alpha' }]
 
     const index = generateRecordSearchIndex('posts', config, data, 'en')
     expect(index.generated).toBeUndefined()
