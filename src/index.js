@@ -43,6 +43,7 @@ export {
   markdownFilenameRoute,
   branchIndexFilename,
   resolveAgentsConfig,
+  acceptsOrigin,
 } from './config.js'
 
 // What a request for a page's markdown names, for a host that answers the links the site index

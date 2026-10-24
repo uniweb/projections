@@ -24,14 +24,15 @@ const DEFAULTS = {
 /**
  * Every key the `agents:` block accepts — the author-facing vocabulary.
  *
- * ⚠️ **This is deliberately WIDER than what {@link resolveAgentsConfig} reads.**
- * Some keys are *carried* rather than honoured: the framework passes them
- * through to the host, which enforces them, and this package never looks at
- * them. `expectedOrigins` is the first — the host checks the `Origin` of
- * requests to its agent endpoint against it.
+ * Some keys are *enforced by the host* rather than by this package.
+ * `expectedOrigins` is one: the host checks the `Origin` of requests to its agent
+ * endpoint against it. It still reads the key by this package's rule
+ * ({@link resolveAgentsConfig}, {@link acceptsOrigin}), so every host checks the
+ * same thing. ⛔ *Until 2026-10-23 this package never read it, and a host read the
+ * key raw.*
  *
- * ⛔ **A carry-only key still has to be listed here, and the reason is the whole
- * point of the list.** The block reaches a backend as opaque JSON, so nothing
+ * ⛔ **Every key has to be listed here, and the reason is the whole point of the
+ * list.** The block reaches a backend as opaque JSON, so nothing
  * downstream can reject a typo — an author who writes `expectedOrgins` gets a
  * site that looks configured and checks nothing, silently, forever. The only
  * lane that can catch it is the one that owns the words. `uniweb doctor` reads
@@ -40,7 +41,7 @@ const DEFAULTS = {
  */
 export const AGENTS_KEYS = Object.freeze([
   ...Object.keys(DEFAULTS),
-  // Carried, not honoured here — see the note above before removing.
+  // Enforced by the host — see the note above before removing.
   'expectedOrigins',
 ])
 
@@ -60,19 +61,24 @@ export const AGENTS_KEYS = Object.freeze([
  * 2026-09-08]. Projections being free is still true and still a reason; the
  * list it was contrasted against is inert.
  *
+ * `expectedOrigins` is the origins the block declares, as a browser's `Origin` header spells
+ * them (`expectedOriginsOf`). It is null when nothing is declared, which means no check.
+ *
  * @param {Object} [siteConfig] - `siteContent.config`
- * @returns {{index: boolean, markdown: boolean, exclude: string[]}}
+ * @returns {{index: boolean, markdown: boolean, exclude: string[], branchIndexes: boolean,
+ *   branchMinPages: number, expectedOrigins: string[]|null}}
  */
 export function resolveAgentsConfig(siteConfig = {}) {
   const agents = siteConfig?.agents
 
   // `agents: false` turns the whole capability off in one word.
   if (agents === false) {
-    return { index: false, markdown: false, exclude: [], branchIndexes: false, branchMinPages: DEFAULT_BRANCH_MIN_PAGES }
+    return { index: false, markdown: false, exclude: [], branchIndexes: false, branchMinPages: DEFAULT_BRANCH_MIN_PAGES, expectedOrigins: null }
   }
-  if (!agents || typeof agents !== 'object') return { ...DEFAULTS }
+  if (!agents || typeof agents !== 'object') return { ...DEFAULTS, expectedOrigins: null }
 
   return {
+    expectedOrigins: expectedOriginsOf(agents.expectedOrigins),
     index: agents.index !== false,
     markdown: agents.markdown !== false,
     exclude: normalizeExclude(agents.exclude),
@@ -83,6 +89,62 @@ export function resolveAgentsConfig(siteConfig = {}) {
       ? agents.branchMinPages
       : DEFAULT_BRANCH_MIN_PAGES,
   }
+}
+
+/**
+ * The origins an `expectedOrigins:` declaration names, as a browser's `Origin` header spells them:
+ * `https://app.example.com/` is `https://app.example.com`, and a path is dropped. An entry that is
+ * no http(s) URL is dropped, and a repeated one kept once.
+ *
+ * @param {*} value - the declared value: a list, or one entry
+ * @returns {string[]|null} null when nothing is declared; `[]` when the list names no origin,
+ *   which accepts the site's own origins only
+ */
+function expectedOriginsOf(value) {
+  if (value === undefined || value === null) return null
+  const out = []
+  for (const entry of Array.isArray(value) ? value : [value]) {
+    const origin = httpOrigin(entry)
+    if (origin && !out.includes(origin)) out.push(origin)
+  }
+  return out
+}
+
+/** An http(s) URL's origin, or null for anything else (including the `null` origin). */
+function httpOrigin(value) {
+  if (typeof value !== 'string' || !value.trim()) return null
+  let url
+  try {
+    url = new URL(value.trim())
+  } catch {
+    return null
+  }
+  return url.protocol === 'http:' || url.protocol === 'https:' ? url.origin : null
+}
+
+/**
+ * ⭐ **WHETHER A HOST THAT OFFERS AN AGENT ACCEPTS A REQUEST FROM `origin`**, by the rule the
+ * site's `agents.expectedOrigins` declares (the public reference's § *Expected origins*):
+ * - nothing declared: every request;
+ * - a request with no `Origin`: accepted, since a server calling the agent sends none;
+ * - one of the site's own origins: always;
+ * - otherwise: a declared origin, compared as origins.
+ *
+ * ⛔ It is a declaration, not a gate. Anything but a browser sends any `Origin` it likes, so this
+ * stops casual misuse and embedding, never spending.
+ *
+ * @param {string[]|null} expectedOrigins - `resolveAgentsConfig(config).expectedOrigins`
+ * @param {string|null|undefined} origin - the request's `Origin` header
+ * @param {{ siteOrigins?: string[] }} [options] - the origins the host serves the site at
+ * @returns {boolean}
+ */
+export function acceptsOrigin(expectedOrigins, origin, { siteOrigins = [] } = {}) {
+  if (expectedOrigins == null) return true
+  if (origin === undefined || origin === null || origin === '') return true
+  const asked = httpOrigin(origin)
+  if (!asked) return false
+  if (siteOrigins.some((own) => httpOrigin(own) === asked)) return true
+  return expectedOrigins.includes(asked)
 }
 
 /**
