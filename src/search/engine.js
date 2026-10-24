@@ -65,7 +65,9 @@
  * ⭐ No platform APIs — no `node:*`, no DOM, no filesystem — and no imports but
  * the result shape and its snippet beside it, so it runs in a browser, in a
  * build, and in a server isolate alike. `tests/environment.test.js` walks the
- * import graph and fails if that stops being true.
+ * import graph and fails if that stops being true. ⛔ Nothing from `@uniweb/core`
+ * either: `@uniweb/kit` bundles this into foundations, where a core subpath
+ * would be a second copy of core (`_contracts/core-single-instance.test.js`).
  */
 
 import { emptyResult } from './result.js'

@@ -4,9 +4,30 @@
  *
  * Where the matches are is the engine's to say (`matchRanges` in `./engine.js`), by its
  * own fold and tokenizer. This only renders them, so it loads no engine.
+ *
+ * ⛔ **It imports nothing, `@uniweb/core` included.** This module and the engine are bundled
+ * into foundations through `@uniweb/kit`'s local search. A `@uniweb/core/<subpath>` import
+ * there compiles a second copy of core into every foundation, since a foundation build
+ * externalizes only the bare `@uniweb/core`. The bare package is no option either, because this
+ * package stays Worker-safe on core's leaves (`tests/environment.test.js`). So `escapeHtml` is
+ * written here, the same rule as `@uniweb/core/page-shell`'s.
  */
 
-import { escapeHtml } from '@uniweb/core/escape-html'
+/**
+ * Escape a string for HTML text or a quoted attribute value.
+ *
+ * @param {*} str
+ * @returns {string} `''` for a value that is empty or absent
+ */
+export function escapeHtml(str) {
+  if (!str) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
 
 /**
  * Build a snippet from content with optional match highlighting

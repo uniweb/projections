@@ -68,4 +68,4 @@ export {
 // shapes a server's answer or renders a snippet itself, and they load no engine: also at
 // `@uniweb/projections/search/result` and `/search/snippet`.
 export { emptyResult } from './result.js'
-export { buildSnippet, highlightMatches } from './snippet.js'
+export { buildSnippet, highlightMatches, escapeHtml } from './snippet.js'
