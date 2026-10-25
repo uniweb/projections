@@ -25,6 +25,7 @@ npm install @uniweb/projections
 | `llms.txt` | agents — discovery | the page graph + each page's first paragraph |
 | `/{route}.md` | agents — retrieval | `section.content` via `@uniweb/content-writer` |
 | search index | site search | the same page graph |
+| `sitemap.xml` | crawlers — every page, in every language | the page graph, each language's content and its record pages |
 | `robots.txt` | crawlers — the site's rules | `seo.robots` and the site's address |
 
 ### The index
@@ -71,6 +72,33 @@ than a lossy translation to plain CommonMark would be.
 An inset — `![A diagram](@NetworkDiagram)` — contributes its caption as plain
 text, never its component: a component name is a rendering assignment, like a
 section's `type`. The search index reads insets the same way.
+
+### `sitemap.xml`
+
+Every page a site serves, at the URL its own `<head>` states as canonical, with
+its URL in each of the site's languages as hreflang alternates. Made in two
+steps, so each language's content can be read on its own:
+
+```js
+import { sitemapEntries, renderSitemap } from '@uniweb/projections'
+
+const entries = languages.flatMap(({ locale, content, records }) =>
+  sitemapEntries(content, { locale, records })
+)
+const sitemap = renderSitemap(entries) // null when there is nothing to list
+```
+
+`records` are the record pages served in that language, since a parametric
+page (`/books/:slug`) is one template in the content. Pass the record entries
+of a search index (`generateRecordSearchIndex(...).entries`), and each is listed
+after the site's own pages by its template's rules.
+
+A page is listed where its URL answers with it. A redirect, a page with no
+content of its own (it sends visitors to its first page), a rewrite, a draft
+(`hidden`), a `knowledge:` page, a page kept out of search (`seo.noindex`, its
+own or the site's) and one naming another URL as its canonical are left out.
+With no address in the content (`config.url`) there are no entries, since a
+sitemap's URLs must be absolute.
 
 ### `robots.txt`
 
@@ -127,6 +155,8 @@ const markdown = renderPageMarkdown(siteContent.pages[0])
 | `renderSiteIndex` | `(siteContent, options?) → string` |
 | `renderPageMarkdown` | `(page, { includeChildren = true, record }?) → string` |
 | `resolvePageDescription` | `(page, { maxChars = 200 }?) → string` |
+| `sitemapEntries` | `(siteContent, { locale, records }?) → entries` |
+| `renderSitemap` | `(entries) → string \| null` |
 | `renderRobotsTxt` | `(siteContent, { sitemap = false }?) → string \| null` |
 
 `renderSiteIndex` options: `address`, `basePath`, `locale`, `defaultLocale`,
