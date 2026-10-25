@@ -25,6 +25,7 @@ npm install @uniweb/projections
 | `llms.txt` | agents — discovery | the page graph + each page's first paragraph |
 | `/{route}.md` | agents — retrieval | `section.content` via `@uniweb/content-writer` |
 | search index | site search | the same page graph |
+| `robots.txt` | crawlers — the site's rules | `seo.robots` and the site's address |
 
 ### The index
 
@@ -71,6 +72,19 @@ An inset — `![A diagram](@NetworkDiagram)` — contributes its caption as plai
 text, never its component: a component name is a rendering assignment, like a
 section's `type`. The search index reads insets the same way.
 
+### `robots.txt`
+
+`renderRobotsTxt(siteContent, { sitemap })` makes the file from `seo.robots` in
+`site.yml` — `allow`, `disallow`, `crawlDelay`, `additionalSitemaps`, and
+`contentSignals`, which say what the content may be used for once fetched —
+with a `Sitemap:` line on the site's address when `sitemap` says the site
+serves one. A signal the site does not declare is left out: unstated is not
+`no`.
+
+It returns `null` when there is no file to serve: for a site served under a
+base path, since crawlers read `robots.txt` only at a host's root, and for a
+site that declares no rules and has no sitemap to name.
+
 ## Configuration
 
 Sites configure this under `agents:` in `site.yml`. Free, and on by default:
@@ -113,6 +127,7 @@ const markdown = renderPageMarkdown(siteContent.pages[0])
 | `renderSiteIndex` | `(siteContent, options?) → string` |
 | `renderPageMarkdown` | `(page, { includeChildren = true, record }?) → string` |
 | `resolvePageDescription` | `(page, { maxChars = 200 }?) → string` |
+| `renderRobotsTxt` | `(siteContent, { sitemap = false }?) → string \| null` |
 
 `renderSiteIndex` options: `address`, `basePath`, `locale`, `defaultLocale`,
 `exclude`, `title`, `description`, `rootGroupTitle`, `maxDescriptionChars`, `records`.

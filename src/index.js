@@ -25,6 +25,7 @@
 
 export { renderSiteIndex } from './site-index.js'
 export { renderPageMarkdown } from './markdown.js'
+export { renderRobotsTxt } from './robots.js'
 export { resolvePageDescription } from './description.js'
 export { recordRoutes } from './record-routes.js'
 
