@@ -158,22 +158,30 @@ describe('renderSiteIndex — exclusions', () => {
 describe('renderSiteIndex — link targets', () => {
   const pages = [page('/docs/collections', { title: 'Collections' })]
 
-  test('root-relative when no baseUrl is known', () => {
+  test('root-relative when the site states no address', () => {
     expect(renderSiteIndex(site(pages))).toContain('(/docs/collections.md)')
   })
 
-  test('absolute when seo.baseUrl is set', () => {
-    const content = site(pages, { seo: { baseUrl: 'https://www.uniweb.io' } })
-    expect(renderSiteIndex(content)).toContain('(https://www.uniweb.io/docs/collections.md)')
+  test('⭐ absolute on the address the site states (`config.url`), base path included', () => {
+    const content = site(pages, { url: 'https://octocat.github.io/handbook/' })
+    expect(renderSiteIndex(content)).toContain('(https://octocat.github.io/handbook/docs/collections.md)')
+    expect(renderSiteIndex(site(pages), { address: 'https://www.uniweb.io' }))
+      .toContain('(https://www.uniweb.io/docs/collections.md)')
   })
 
-  test('a trailing slash on baseUrl does not double up', () => {
-    const content = site(pages, { seo: { baseUrl: 'https://www.uniweb.io/' } })
-    expect(renderSiteIndex(content)).toContain('(https://www.uniweb.io/docs/collections.md)')
+  test('⛔ an authored seo.baseUrl is not the address — it named a static host, maybe not this one', () => {
+    const content = site(pages, { seo: { baseUrl: 'https://octocat.github.io' } })
+    expect(renderSiteIndex(content)).toContain('(/docs/collections.md)')
   })
 
-  test('a subdirectory deploy prefixes basePath', () => {
+  test('a subdirectory deploy prefixes basePath — the base the site states by default', () => {
     expect(renderSiteIndex(site(pages), { basePath: '/docs/' })).toContain('(/docs/docs/collections.md)')
+    expect(renderSiteIndex(site(pages, { base: '/docs/' }))).toContain('(/docs/docs/collections.md)')
+  })
+
+  test('a host’s origin option is still read, with the base, until it passes `address`', () => {
+    expect(renderSiteIndex(site(pages), { baseUrl: 'https://www.uniweb.io/', basePath: '/docs/' }))
+      .toContain('(https://www.uniweb.io/docs/docs/collections.md)')
   })
 
   test('the site root links to index.md', () => {

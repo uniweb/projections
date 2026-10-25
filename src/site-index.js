@@ -21,8 +21,11 @@ const ROOT_GROUP_TITLE = 'Pages'
  *
  * @param {Object} siteContent - Parsed site-content.json (one locale)
  * @param {Object} [options]
- * @param {string} [options.baseUrl] - Site origin; links are root-relative without it
- * @param {string} [options.basePath] - Subdirectory deploy prefix
+ * @param {string} [options.address] - The site's address — links are absolute on it, root-relative
+ *   without it. Default: the one the site states, `config.url`.
+ * @param {string} [options.basePath] - Subdirectory deploy prefix, for root-relative links. Default:
+ *   `config.base`
+ * @param {string} [options.baseUrl] - ⛔ An origin, read only while a host still passes it (`buildPageUrl`)
  * @param {string} [options.locale] - Locale being rendered
  * @param {string} [options.defaultLocale] - Locale served at the root
  * @param {string[]} [options.exclude] - Additional excluded route prefixes
@@ -52,8 +55,12 @@ export function renderSiteIndex(siteContent, options = {}) {
     : null
 
   const {
-    baseUrl = config.seo?.baseUrl || '',
-    basePath = '',
+    // ⭐ What the content states about where it is served — never an author's address for another
+    // host. ⛔ Until 2026-10-25 this defaulted to `config.seo.baseUrl`, which a site wrote for a
+    // static host and a host serving the same site would then have linked to.
+    address = config.url || null,
+    baseUrl = '',
+    basePath = config.base || '',
     locale = config.activeLocale,
     defaultLocale,
     exclude = [],
@@ -64,6 +71,7 @@ export function renderSiteIndex(siteContent, options = {}) {
   } = options
 
   const urlOptions = {
+    address,
     baseUrl,
     basePath,
     locale,

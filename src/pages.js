@@ -8,6 +8,7 @@
  * are on by default, so weakening these turns the default into a leak.
  */
 
+import { siteAddress } from '@uniweb/core/site-address'
 import { pageMarkdownFilename, normalizeExclude } from './config.js'
 
 /**
@@ -322,22 +323,24 @@ export function applyRouteTranslation(route, locale, routeTranslations) {
 /**
  * URL of a page's markdown projection.
  *
- * Absolute when a `baseUrl` is known, root-relative otherwise. A root-relative
- * link still resolves for an agent that arrived via the index, which is why an
- * unset `baseUrl` warns rather than suppressing the artifact the way the
- * sitemap does.
+ * Absolute on the site's address when it is known — the URL every absolute link the site states
+ * is made on (`@uniweb/core/site-address`) — and root-relative under the base otherwise. A
+ * root-relative link still resolves for an agent that arrived via the index, which is why an
+ * unknown address warns rather than suppressing the artifact the way the sitemap does.
  *
  * @param {string} route
  * @param {Object} [options]
- * @param {string} [options.baseUrl] - Site origin, e.g. `https://example.com`
- * @param {string} [options.basePath] - Subdirectory deploy prefix, e.g. `/docs/`
+ * @param {string} [options.address] - The site's address, `https://example.com/docs/` (`config.url`)
+ * @param {string} [options.basePath] - Subdirectory deploy prefix, e.g. `/docs/`, for a root-relative link
+ * @param {string} [options.baseUrl] - ⛔ An origin, read only while a host still passes it: the
+ *   option `address` replaced on 2026-10-25. Remove once that host passes `address`.
  * @param {string} [options.locale] - Active locale
  * @param {string} [options.defaultLocale] - Locale served at the root
  * @param {Object} [options.routeTranslations]
  * @returns {string}
  */
 export function buildPageUrl(route, options = {}) {
-  const { baseUrl = '', basePath = '', locale, defaultLocale, routeTranslations } = options
+  const { address = null, baseUrl = '', basePath = '', locale, defaultLocale, routeTranslations } = options
 
   const localized =
     locale && defaultLocale && locale !== defaultLocale
@@ -346,9 +349,11 @@ export function buildPageUrl(route, options = {}) {
 
   const localePrefix = locale && defaultLocale && locale !== defaultLocale ? `/${locale}` : ''
   const filename = pageMarkdownFilename(localized)
-  const prefix = normalizeBasePath(basePath)
 
-  const path = `${prefix}${localePrefix}/${filename}`
+  const root = siteAddress(address)
+  if (root) return new URL(`${localePrefix}/${filename}`.slice(1), root).href
+
+  const path = `${normalizeBasePath(basePath)}${localePrefix}/${filename}`
   if (!baseUrl) return path
   return `${baseUrl.replace(/\/+$/, '')}${path}`
 }

@@ -38,6 +38,7 @@ const ALLOWED_PACKAGES = new Set([
   '@uniweb/core/route-match',
   '@uniweb/core/fetch-config',
   '@uniweb/core/resolve-route',
+  '@uniweb/core/site-address',
 ])
 
 /** Globals that only exist in one environment. */
