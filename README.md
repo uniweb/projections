@@ -100,7 +100,7 @@ the on-by-default into a leak.
 ```js
 import { renderSiteIndex, renderPageMarkdown } from '@uniweb/projections'
 
-const index = renderSiteIndex(siteContent, { baseUrl: 'https://example.com' })
+const index = renderSiteIndex(siteContent) // links on the address the site states, `config.url`
 const markdown = renderPageMarkdown(siteContent.pages[0])
 ```
 
@@ -114,10 +114,12 @@ const markdown = renderPageMarkdown(siteContent.pages[0])
 | `renderPageMarkdown` | `(page, { includeChildren = true, record }?) → string` |
 | `resolvePageDescription` | `(page, { maxChars = 200 }?) → string` |
 
-`renderSiteIndex` options: `baseUrl`, `basePath`, `locale`, `defaultLocale`,
+`renderSiteIndex` options: `address`, `basePath`, `locale`, `defaultLocale`,
 `exclude`, `title`, `description`, `rootGroupTitle`, `maxDescriptionChars`, `records`.
-Links are absolute when `baseUrl` is known and root-relative otherwise — a
-root-relative link still resolves for an agent that arrived via the index.
+Links are absolute on the site's address — `address`, by default the one the
+content states (`config.url`) — and root-relative under `basePath` when it is
+unknown: a root-relative link still resolves for an agent that arrived via the
+index.
 
 **Record pages.** A parametric page (`/blog/:slug`) is never listed itself. Pass the record
 entries of a search index as `records` and each record's page is listed in its place. A
@@ -184,14 +186,13 @@ localized page lives.
 **Runs anywhere JS runs.** No `node:*`, no bundler, no DOM, no filesystem —
 enforced by `tests/environment.test.js`, which walks the real import graph.
 
-This is the package's reason to exist rather than a nicety. A Uniweb project is
-dual-published: the CLI and the app are both JavaScript clients of one backend,
-and either may be the publisher. An artifact derived from site content has to
-come out identical whichever side published, or a deployed site's artifacts
-oscillate — and an index that exists after one publish and vanishes after
-another is worse than none, because agents are told to rely on it. One
-implementation, imported by both publishers; the backend stores and serves
-opaque bytes and generates nothing.
+This is the package's reason to exist rather than a nicety. The same site's
+artifacts are made in more than one place — by the static build, and by a host
+that serves the site from its content and derives them on the request path, in
+a Worker. An artifact derived from site content has to come out identical
+whichever made it, or a site's artifacts change with whoever served them — and
+an index that exists on one host and vanishes on another is worse than none,
+because agents are told to rely on it. One implementation, imported by each.
 
 The same contract is why `search/generate.js` imports the leaf subpath
 `@uniweb/core/locale-config` rather than the bare `@uniweb/core` entry, whose
