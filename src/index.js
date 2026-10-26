@@ -53,6 +53,10 @@ export {
 // makes: `resolveRoute`'s answer for that page, with a redirect sent to its target's markdown.
 export { resolveMarkdownRequest } from './markdown-request.js'
 
+// Where each page's markdown is, for a page's head to link it. Also at its own subpath, which
+// leaves the renderers out.
+export { pageMarkdownUrls } from './markdown-urls.js'
+
 export {
   selectIndexablePages,
   selectIndexBranches,

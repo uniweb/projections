@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.js",
+    "./markdown-urls": "./src/markdown-urls.js",
     "./search": "./src/search/index.js",
     "./search/engine": "./src/search/engine.js",
     "./search/result": "./src/search/result.js",
