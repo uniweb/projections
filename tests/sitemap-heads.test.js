@@ -112,6 +112,19 @@ describe('the sitemap and the pages agree — the cases that move a URL', () => 
     expect(entries.map((entry) => entry.loc)).toContain('https://example.org/fr/livres/dune')
   })
 
+  test('a copy served on a domain pinned to another language, in each language', () => {
+    for (const locale of ['en', 'fr', 'es']) {
+      const siteContent = content(locale, { domainLocale: 'fr', domainLocales: { 'fr.example.com': 'fr' } })
+      const website = new Website({ content: structuredClone(siteContent) })
+      const entries = sitemapEntries(siteContent, { records: RECORDS })
+      expect(entries.map(({ loc, alternates }) => ({ loc, alternates })).sort(byLoc), locale).toEqual(
+        listedByHeads(website, RECORDS.map((record) => record.route)).sort(byLoc)
+      )
+    }
+    const english = sitemapEntries(content('en', { domainLocale: 'fr', domainLocales: { 'fr.example.com': 'fr' } }))
+    expect(english.map((entry) => entry.loc)).toContain(`${ADDRESS}books/`)
+  })
+
   test('a site kept out of search lists nothing, and its pages say so', () => {
     const siteContent = content('en', { seo: { noindex: true } })
     const website = new Website({ content: structuredClone(siteContent) })

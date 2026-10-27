@@ -191,6 +191,18 @@ describe('sitemapEntries — a site in several languages', () => {
     const french = sitemapEntries(multilingual({ activeLocale: 'fr', domainLocales: { 'fr.example.com': 'fr' } }))
     expect(locs(french)).toEqual(['https://fr.example.com/', 'https://fr.example.com/livres'])
   })
+
+  test('⭐ content served on a domain pinned to another language lists the URLs the address serves', () => {
+    // fr.example.com serves French unprefixed and English at /en/…; the address serves English unprefixed
+    const served = (activeLocale) => multilingual({ activeLocale, domainLocale: 'fr', domainLocales: { 'fr.example.com': 'fr' } })
+    expect(locs(sitemapEntries(served('en')))).toEqual([ADDRESS, `${ADDRESS}books/`])
+    const [, books] = sitemapEntries(served('fr'))
+    expect(books.alternates).toEqual([
+      { hreflang: 'en', url: `${ADDRESS}books/` },
+      { hreflang: 'fr', url: 'https://fr.example.com/livres' },
+      { hreflang: 'x-default', url: `${ADDRESS}books/` },
+    ])
+  })
 })
 
 describe('renderSitemap', () => {

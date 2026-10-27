@@ -23,7 +23,7 @@
  */
 
 import { absoluteUrl, pageUrl, siteAddress } from '@uniweb/core/site-address'
-import { localeUrl, resolveRoute, routeIndex } from '@uniweb/core/resolve-route'
+import { localeUrl, localeUrlOnAddress, resolveRoute, routeIndex } from '@uniweb/core/resolve-route'
 import { isDynamicTemplate, isKnowledgeRoute, knowledgeRoots } from './pages.js'
 
 /**
@@ -80,8 +80,8 @@ export function sitemapEntries(siteContent, { records, locale } = {}) {
   const siteNoindex = Boolean(config.seo?.noindex)
   const knowledge = knowledgeRoots(pages)
 
-  /** A route's URL in a language: the one `Website#getPageUrl` states. */
-  const urlOf = (route, code) => pageUrl(address, localeUrl(index, code, route, context), { trailingSlash })
+  /** A route's URL in a language: the one `Website#getPageUrl` states, as the address serves it. */
+  const urlOf = (route, code) => pageUrl(address, localeUrlOnAddress(index, code, route, context), { trailingSlash })
 
   /** `Website#getPageAlternates`: the URL in each language, and the site's default as `x-default`. */
   const alternatesOf = (route) => {
