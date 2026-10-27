@@ -8,6 +8,7 @@
  * are on by default, so weakening these turns the default into a leak.
  */
 
+import { NOT_FOUND_ROUTE } from '@uniweb/core/resolve-route'
 import { siteAddress } from '@uniweb/core/site-address'
 import { pageMarkdownFilename, normalizeExclude } from './config.js'
 
@@ -153,6 +154,10 @@ function excludedBranches(pages, exclude) {
  */
 function isIndexable(page, branches) {
   if (!page?.route) return false
+  // The site's not-found page answers a URL that names no page, and no URL answers with it
+  // (`@uniweb/core/resolve-route`). A static build holds it apart, as `notFound`; content may carry
+  // it among its pages instead. ⛔ Until 2026-10-27 that page was listed, and its link answered 404.
+  if (page.route === NOT_FOUND_ROUTE) return false
   if (isDynamicTemplate(page)) return false
   if (page.seo?.noindex) return false
   if (page.hidden) return false
@@ -165,7 +170,9 @@ function isIndexable(page, branches) {
  * The pages a projection may describe: real pages, in build order.
  *
  * Containers are excluded — they have no body — but they survive as headings
- * via {@link groupPagesForIndex}.
+ * via {@link groupPagesForIndex}. The site's not-found page (`/404`) is excluded
+ * and is no heading either: content may carry it among its pages, but it is no
+ * page of the site.
  *
  * @param {Object[]} pages - `siteContent.pages` (flat, already ordered)
  * @param {Object} [options]
