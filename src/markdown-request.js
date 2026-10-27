@@ -1,10 +1,10 @@
 /**
  * @fileoverview What a request for a page's markdown names, for a host that answers one.
  *
- * `renderSiteIndex` links each page's markdown at `buildPageUrl`: the locale's prefix, then the
- * page's route as that locale shows it, as a filename (`/fr/blogue.md`, `/fr/index.md`). A host
- * serving those links answers each request with `resolveMarkdownRequest`, the same answer
- * `resolveRoute` gives for the page's own URL.
+ * `renderSiteIndex` links each page's markdown at `markdownPathOf` of the page's own URL: the
+ * locale's prefix, then the page's route as that locale shows it, as a filename (`/fr/blogue.md`,
+ * `/fr/index.md`). A host serving those links answers each request with `resolveMarkdownRequest`,
+ * the same answer `resolveRoute` gives for the page's own URL.
  *
  * ⛔ Until 2026-10-23 a host composed this itself, and neither composition is right:
  * - Reading the whole path with `markdownFilenameRoute` makes `/fr/index.md` a page called
@@ -19,7 +19,7 @@ import { markdownFilenameRoute, pageMarkdownFilename } from './config.js'
 /**
  * The path a `.md` request names a page by, as a visitor would ask for the page: the locale's
  * prefix as requested, then the route the filename reads as. `index` is the root of the site or
- * of a locale. The inverse of `buildPageUrl`, without its base and origin.
+ * of a locale. The inverse of `markdownPathOf`.
  *
  * @param {string} path
  * @param {Object} config - the content's `config` (`languages`, `defaultLanguage`, `domainLocale`)
@@ -32,6 +32,20 @@ function pagePathOf(path, config) {
   if (!prefixed) return route
   const prefix = path.slice(0, path.length - rest.length)
   return route === '/' ? prefix : `${prefix}${route}`
+}
+
+/**
+ * Where the markdown of the page at a path is: the locale's prefix, then the rest of the path as a
+ * filename — `/fr/blogue` → `/fr/blogue.md`, `/fr/` and `/fr` → `/fr/index.md`, `/` → `/index.md`.
+ * The inverse of `pagePathOf`; `renderSiteIndex` links each page's markdown here.
+ *
+ * @param {string} path - a page's URL path, as its locale shows it, with no base
+ * @param {Object} config - the content's `config` (`languages`, `defaultLanguage`)
+ * @returns {string}
+ */
+export function markdownPathOf(path, config) {
+  const { locale, prefixed, path: rest } = localeOfPath(path, config)
+  return `${prefixed ? `/${locale}` : ''}/${pageMarkdownFilename(rest)}`
 }
 
 /**
@@ -52,9 +66,7 @@ function markdownLocation(location, index, config, context) {
   const pathPart = cut === -1 ? location : location.slice(0, cut)
   const suffix = cut === -1 ? '' : location.slice(cut)
   if (resolveRoute(index, pathPart, context).kind === 'notFound') return location
-  const { prefixed, path: rest } = localeOfPath(pathPart, config)
-  const prefix = prefixed ? pathPart.slice(0, pathPart.length - rest.length) : ''
-  return `${prefix}/${pageMarkdownFilename(rest)}${suffix}`
+  return `${markdownPathOf(pathPart, config)}${suffix}`
 }
 
 /**

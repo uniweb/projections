@@ -297,10 +297,11 @@ export function groupPagesForIndex(pages = [], { exclude = [], branch = null } =
 /**
  * Translate a route into a locale's URL segments.
  *
- * Mirrors the sitemap's behavior so an agent index and a sitemap never
- * disagree about where a localized page lives. A route with no entry of its
- * own takes its nearest translated ancestor's: the longest entry that is a
- * prefix of it, as `@uniweb/core`'s `translateRoute` does. Until 2026-10-01
+ * A static build names a language's markdown files with it, at the URLs that
+ * language's `llms.txt` links them (`renderSiteIndex`, by `@uniweb/core`'s rule).
+ * A route with no entry of its own takes its nearest translated ancestor's: the
+ * longest entry that is a prefix of it, as `@uniweb/core`'s `translateRoute`
+ * does. Until 2026-10-01
  * the first entry in page order won, so `/docs/intro/step` under `/docs` and
  * `/docs/intro` kept `intro` untranslated.
  *
@@ -327,6 +328,11 @@ export function applyRouteTranslation(route, locale, routeTranslations) {
  * is made on (`@uniweb/core/site-address`) — and root-relative under the base otherwise. A
  * root-relative link still resolves for an agent that arrived via the index, which is why an
  * unknown address warns rather than suppressing the artifact the way the sitemap does.
+ *
+ * ⚠️ It localizes a link only when it is told both `locale` and `defaultLocale`, and it knows no
+ * language's own domain. `renderSiteIndex` makes its links from the content instead, by the rule
+ * the sitemap and a page's head use; until 2026-10-27 it used this, so a host that passed the
+ * content alone got a non-default language's links with no prefix.
  *
  * @param {string} route
  * @param {Object} [options]
@@ -363,7 +369,7 @@ export function buildPageUrl(route, options = {}) {
  * @param {string} basePath
  * @returns {string}
  */
-function normalizeBasePath(basePath) {
+export function normalizeBasePath(basePath) {
   if (!basePath || basePath === '/') return ''
   const withSlash = basePath.startsWith('/') ? basePath : `/${basePath}`
   return withSlash.replace(/\/+$/, '')

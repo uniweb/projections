@@ -8,9 +8,19 @@
  * Follows the external `llms.txt` convention: H1 title, blockquote summary,
  * `##` groups of annotated links. Link targets are the `.md` projections, so
  * following an entry is one hop rather than a fetch-then-strip.
+ *
+ * ⭐ A LINK IS THE PAGE'S OWN URL IN THE CONTENT'S LANGUAGE, as a `.md` filename: the URL the
+ * page's head and the sitemap state (`@uniweb/core/resolve-route`), and the path
+ * `resolveMarkdownRequest` answers with that page. ⛔ Until 2026-10-27 a link was localized only
+ * when the caller also passed `defaultLocale`, which the content already states; a host that
+ * passed the content alone got a French index linking `/evenements.md` where the page's markdown
+ * is at `/fr/evenements.md`.
  */
 
-import { groupPagesForIndex, buildPageUrl } from './pages.js'
+import { localeUrl, localeUrlOnAddress, routeIndex } from '@uniweb/core/resolve-route'
+import { siteAddress } from '@uniweb/core/site-address'
+import { groupPagesForIndex, normalizeBasePath } from './pages.js'
+import { markdownPathOf } from './markdown-request.js'
 import { resolvePageDescription } from './description.js'
 
 /** Heading for pages that sit under no container. */
@@ -25,9 +35,12 @@ const ROOT_GROUP_TITLE = 'Pages'
  *   without it. Default: the one the site states, `config.url`.
  * @param {string} [options.basePath] - Subdirectory deploy prefix, for root-relative links. Default:
  *   `config.base`
- * @param {string} [options.baseUrl] - ⛔ An origin, read only while a host still passes it (`buildPageUrl`)
- * @param {string} [options.locale] - Locale being rendered
- * @param {string} [options.defaultLocale] - Locale served at the root
+ * @param {string} [options.baseUrl] - ⛔ An origin put before a root-relative link, read only while a
+ *   host still passes it: the option `address` replaced on 2026-10-25
+ * @param {string} [options.locale] - the language the content is in. Default: `config.activeLocale`,
+ *   else the site's default. A host holding each language's content apart passes it. ⛔ There is no
+ *   `defaultLocale` option since 2026-10-27: the content states its languages, as the sitemap reads
+ *   them.
  * @param {string[]} [options.exclude] - Additional excluded route prefixes
  * @param {string} [options.title] - Override the site title
  * @param {string} [options.description] - Override the site summary
@@ -61,8 +74,7 @@ export function renderSiteIndex(siteContent, options = {}) {
     address = config.url || null,
     baseUrl = '',
     basePath = config.base || '',
-    locale = config.activeLocale,
-    defaultLocale,
+    locale,
     exclude = [],
     title = branchPage?.title || branchPage?.label || config.title || config.name || 'Site',
     description = branchPage?.description || (branch ? '' : config.description || ''),
@@ -70,13 +82,17 @@ export function renderSiteIndex(siteContent, options = {}) {
     maxDescriptionChars = 200,
   } = options
 
+  // The content's languages, as the sitemap reads them, with the address the links are made on.
+  const root = siteAddress(address)
+  const index = routeIndex(root ? { ...siteContent, config: { ...config, url: root } } : siteContent)
+  const activeLocale = locale || index.activeLocale
   const urlOptions = {
-    address,
-    baseUrl,
+    index,
+    config,
+    root,
     basePath,
-    locale,
-    defaultLocale,
-    routeTranslations: config.i18n?.routeTranslations,
+    baseUrl,
+    context: { activeLocale, defaultLocale: index.defaultLocale },
   }
 
   const lines = [`# ${title}`]
@@ -128,12 +144,34 @@ function renderEntry(page, urlOptions, maxChars) {
   const title = page.title || page.label || page.route
   if (!title) return ''
 
-  const url = buildPageUrl(page.route, urlOptions)
+  const url = markdownUrl(page.route, urlOptions)
   const description = resolvePageDescription(page, { maxChars })
 
   return description
     ? `- [${title}](${url}): ${description}`
     : `- [${title}](${url})`
+}
+
+/**
+ * Where a page's markdown is, in the content's language. On the site's address, at the page's URL
+ * as the address serves it (`localeUrlOnAddress`, the sitemap's rule). With the address unknown,
+ * root-relative under the base, as the host serving the index shows the page (`localeUrl`). A
+ * language with a domain of its own is linked there.
+ *
+ * @param {string} route - the page's route, canonical or as the content's language shows it
+ * @param {Object} urlOptions
+ * @returns {string}
+ */
+function markdownUrl(route, { index, config, root, basePath, baseUrl, context }) {
+  const shown = (root ? localeUrlOnAddress : localeUrl)(index, context.activeLocale, route, context)
+  if (/^https?:\/\//i.test(shown)) {
+    const { origin, pathname } = new URL(shown)
+    return new URL(markdownPathOf(pathname, config), origin).href
+  }
+  const path = markdownPathOf(shown, config)
+  if (root) return new URL(path.slice(1), root).href
+  const local = `${normalizeBasePath(basePath)}${path}`
+  return baseUrl ? `${baseUrl.replace(/\/+$/, '')}${local}` : local
 }
 
 /**

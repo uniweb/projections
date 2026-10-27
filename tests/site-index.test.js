@@ -6,7 +6,9 @@
  * A weakened exclusion here is a leak, not a cosmetic slip.
  */
 
+import { localeOfPath } from '@uniweb/core/resolve-route'
 import { renderSiteIndex } from '../src/site-index.js'
+import { markdownPathOf, resolveMarkdownRequest } from '../src/markdown-request.js'
 import { page, container, section, site } from './helpers.js'
 
 describe('renderSiteIndex — shape', () => {
@@ -214,6 +216,70 @@ describe('renderSiteIndex — localization', () => {
     const content = site(nested, { i18n: { routeTranslations: { es: { '/docs': '/documentos', '/docs/intro': '/documentos/introduccion' } } } })
     const output = renderSiteIndex(content, { locale: 'es', defaultLocale: 'en' })
     expect(output).toContain('(/es/documentos/introduccion/step.md)')
+  })
+})
+
+describe('renderSiteIndex — each link is the page in the content’s language', () => {
+  const translations = { fr: { '/events': '/evenements' } }
+  /** French content as a host serves it: the site's languages stated, French active. */
+  const french = (pages, config = {}) =>
+    site(pages, {
+      defaultLanguage: 'en',
+      languages: ['en', 'fr'],
+      activeLocale: 'fr',
+      url: 'https://example.com/',
+      i18n: { routeTranslations: translations },
+      ...config,
+    })
+  const links = (md) => [...md.matchAll(/\]\(([^)]+)\)/g)].map((match) => match[1])
+
+  test('⭐ the content alone is enough — prefixed and translated, on a payload of either route form', () => {
+    // ⛔ Until 2026-10-27 this was `/index.md` and `/evenements.md` (or `/events.md`) unless the
+    // caller also passed `defaultLocale`.
+    const canonical = french([page('/', { title: 'Accueil' }), page('/events', { title: 'Événements' })])
+    const own = french([page('/', { title: 'Accueil' }), page('/evenements', { title: 'Événements' })])
+    for (const content of [canonical, own]) {
+      expect(links(renderSiteIndex(content))).toEqual(['https://example.com/fr/index.md', 'https://example.com/fr/evenements.md'])
+    }
+  })
+
+  test('⭐ a host answering a link picks this language by its path, and finds the page listed', () => {
+    const content = french([page('/', { title: 'Accueil' }), page('/events', { title: 'Événements' })])
+    for (const link of links(renderSiteIndex(content))) {
+      const path = new URL(link).pathname
+      expect(localeOfPath(path, content.config).locale, link).toBe('fr')
+      expect(resolveMarkdownRequest(content, path)?.kind, link).toBe('page')
+    }
+  })
+
+  test('a language on a domain of its own is linked there', () => {
+    const content = french([page('/events', { title: 'Événements' })], { domainLocales: { 'fr.example.com': 'fr' } })
+    expect(links(renderSiteIndex(content))).toEqual(['https://fr.example.com/evenements.md'])
+  })
+
+  test('with the address unknown, root-relative under the base, as the host serving it shows the page', () => {
+    const content = french([page('/events', { title: 'Événements' })], { url: undefined, base: '/docs/' })
+    expect(links(renderSiteIndex(content))).toEqual(['/docs/fr/evenements.md'])
+    const unprefixed = { ...content, config: { ...content.config, domainLocale: 'fr' } }
+    expect(links(renderSiteIndex(unprefixed))).toEqual(['/docs/evenements.md'])
+  })
+
+  test('told the language, as a host holding each language’s content apart tells it', () => {
+    const content = french([page('/events', { title: 'Événements' })], { activeLocale: undefined })
+    expect(links(renderSiteIndex(content, { locale: 'fr' }))).toEqual(['https://example.com/fr/evenements.md'])
+    expect(links(renderSiteIndex(content))).toEqual(['https://example.com/events.md'])
+  })
+})
+
+describe('markdownPathOf — a page path’s markdown', () => {
+  test('the locale’s prefix, then the rest as a filename — the inverse of a `.md` request', () => {
+    const config = { defaultLanguage: 'en', languages: ['en', 'fr'] }
+    expect(markdownPathOf('/', config)).toBe('/index.md')
+    expect(markdownPathOf('/blog/x', config)).toBe('/blog/x.md')
+    expect(markdownPathOf('/fr/', config)).toBe('/fr/index.md')
+    // ⛔ the inline rule this replaced cut the prefix by length, which gives `/f` for `/fr`
+    expect(markdownPathOf('/fr', config)).toBe('/fr/index.md')
+    expect(markdownPathOf('/fr/blogue', config)).toBe('/fr/blogue.md')
   })
 })
 
