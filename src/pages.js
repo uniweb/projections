@@ -343,17 +343,19 @@ export function applyRouteTranslation(route, locale, routeTranslations) {
  *
  * @param {string} route
  * @param {Object} [options]
- * @param {string} [options.address] - The site's address, `https://example.com/docs/` (`config.url`)
+ * @param {string} [options.address] - The site's address, `https://example.com/docs/` (`config.url`).
+ *   ⛔ It replaced the `baseUrl` option, an origin, which is refused since 2026-10-27.
  * @param {string} [options.basePath] - Subdirectory deploy prefix, e.g. `/docs/`, for a root-relative link
- * @param {string} [options.baseUrl] - ⛔ An origin, read only while a host still passes it: the
- *   option `address` replaced on 2026-10-25. Remove once that host passes `address`.
  * @param {string} [options.locale] - Active locale
  * @param {string} [options.defaultLocale] - Locale served at the root
  * @param {Object} [options.routeTranslations]
  * @returns {string}
  */
 export function buildPageUrl(route, options = {}) {
-  const { address = null, baseUrl = '', basePath = '', locale, defaultLocale, routeTranslations } = options
+  if (options.baseUrl !== undefined) {
+    throw new TypeError("buildPageUrl: `baseUrl` is retired; pass `address`, the site's root URL with its base path")
+  }
+  const { address = null, basePath = '', locale, defaultLocale, routeTranslations } = options
 
   const localized =
     locale && defaultLocale && locale !== defaultLocale
@@ -366,9 +368,7 @@ export function buildPageUrl(route, options = {}) {
   const root = siteAddress(address)
   if (root) return new URL(`${localePrefix}/${filename}`.slice(1), root).href
 
-  const path = `${normalizeBasePath(basePath)}${localePrefix}/${filename}`
-  if (!baseUrl) return path
-  return `${baseUrl.replace(/\/+$/, '')}${path}`
+  return `${normalizeBasePath(basePath)}${localePrefix}/${filename}`
 }
 
 /**

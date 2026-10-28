@@ -8,6 +8,7 @@
 
 import { localeOfPath } from '@uniweb/core/resolve-route'
 import { renderSiteIndex } from '../src/site-index.js'
+import { buildPageUrl } from '../src/pages.js'
 import { markdownPathOf, resolveMarkdownRequest } from '../src/markdown-request.js'
 import { page, container, section, site } from './helpers.js'
 
@@ -181,8 +182,11 @@ describe('renderSiteIndex — link targets', () => {
     expect(renderSiteIndex(site(pages, { base: '/docs/' }))).toContain('(/docs/docs/collections.md)')
   })
 
-  test('a host’s origin option is still read, with the base, until it passes `address`', () => {
-    expect(renderSiteIndex(site(pages), { baseUrl: 'https://www.uniweb.io/', basePath: '/docs/' }))
+  test('⛔ the `baseUrl` option is retired, and refused: an address is the origin and the base', () => {
+    expect(() => renderSiteIndex(site(pages), { baseUrl: 'https://www.uniweb.io/', basePath: '/docs/' }))
+      .toThrow(/pass `address`/)
+    expect(() => buildPageUrl('/docs/collections', { baseUrl: 'https://www.uniweb.io/' })).toThrow(/pass `address`/)
+    expect(renderSiteIndex(site(pages), { address: 'https://www.uniweb.io/docs/' }))
       .toContain('(https://www.uniweb.io/docs/docs/collections.md)')
   })
 

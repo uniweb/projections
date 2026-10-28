@@ -32,11 +32,10 @@ const ROOT_GROUP_TITLE = 'Pages'
  * @param {Object} siteContent - Parsed site-content.json (one locale)
  * @param {Object} [options]
  * @param {string} [options.address] - The site's address — links are absolute on it, root-relative
- *   without it. Default: the one the site states, `config.url`.
+ *   without it. Default: the one the site states, `config.url`. ⛔ It replaced the `baseUrl` option,
+ *   an origin put before a root-relative link, which is refused since 2026-10-27.
  * @param {string} [options.basePath] - Subdirectory deploy prefix, for root-relative links. Default:
  *   `config.base`
- * @param {string} [options.baseUrl] - ⛔ An origin put before a root-relative link, read only while a
- *   host still passes it: the option `address` replaced on 2026-10-25
  * @param {string} [options.locale] - the language the content is in. Default: `config.activeLocale`,
  *   else the site's default. A host holding each language's content apart passes it. ⛔ There is no
  *   `defaultLocale` option since 2026-10-27: the content states its languages, as the sitemap reads
@@ -59,6 +58,9 @@ const ROOT_GROUP_TITLE = 'Pages'
  * @returns {string} The index document
  */
 export function renderSiteIndex(siteContent, options = {}) {
+  if (options.baseUrl !== undefined) {
+    throw new TypeError("renderSiteIndex: `baseUrl` is retired; pass `address`, the site's root URL with its base path")
+  }
   const config = siteContent?.config || {}
   const { branch = null } = options
 
@@ -72,7 +74,6 @@ export function renderSiteIndex(siteContent, options = {}) {
     // host. ⛔ Until 2026-10-25 this defaulted to `config.seo.baseUrl`, which a site wrote for a
     // static host and a host serving the same site would then have linked to.
     address = config.url || null,
-    baseUrl = '',
     basePath = config.base || '',
     locale,
     exclude = [],
@@ -91,7 +92,6 @@ export function renderSiteIndex(siteContent, options = {}) {
     config,
     root,
     basePath,
-    baseUrl,
     context: { activeLocale, defaultLocale: index.defaultLocale },
   }
 
@@ -162,7 +162,7 @@ function renderEntry(page, urlOptions, maxChars) {
  * @param {Object} urlOptions
  * @returns {string}
  */
-function markdownUrl(route, { index, config, root, basePath, baseUrl, context }) {
+function markdownUrl(route, { index, config, root, basePath, context }) {
   const shown = (root ? localeUrlOnAddress : localeUrl)(index, context.activeLocale, route, context)
   if (/^https?:\/\//i.test(shown)) {
     const { origin, pathname } = new URL(shown)
@@ -170,8 +170,7 @@ function markdownUrl(route, { index, config, root, basePath, baseUrl, context })
   }
   const path = markdownPathOf(shown, config)
   if (root) return new URL(path.slice(1), root).href
-  const local = `${normalizeBasePath(basePath)}${path}`
-  return baseUrl ? `${baseUrl.replace(/\/+$/, '')}${local}` : local
+  return `${normalizeBasePath(basePath)}${path}`
 }
 
 /**

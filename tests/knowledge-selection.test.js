@@ -122,7 +122,7 @@ describe('adopting the shared selector closes the rest of the gap too', () => {
 
 describe('the public agent projections stay out too', () => {
   it('llms.txt names no knowledge page', () => {
-    const index = renderSiteIndex(siteWithKnowledge(), { baseUrl: 'https://example.com' })
+    const index = renderSiteIndex(siteWithKnowledge(), { address: 'https://example.com' })
 
     expect(index).toContain('/about.md')
     expect(index).not.toContain('/kb')
