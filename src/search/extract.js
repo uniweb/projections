@@ -133,7 +133,10 @@ function extractFromSection(section, page, options, ancestorAnchor) {
     excludeComponents
   } = options
 
-  const sectionId = section.id || 'unknown'
+  // The section's place in its page (`2.1`), which a static build writes as `id`. A payload with
+  // no positional id — a backend's sections carry `stableId` alone — keys by that, so a page's
+  // entries stay distinct: they were all `unknown` there, one key repeated for every section.
+  const sectionId = section.id || section.stableId || 'unknown'
   const component = section.component || section.type || 'unknown'
 
   // Where a reader gets taken for a hit in this section.

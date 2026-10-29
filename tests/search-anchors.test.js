@@ -140,3 +140,20 @@ describe('the href a consumer composes from an entry', () => {
     for (const href of hrefs) expect(href).toBe('/how-it-works#section-insight')
   })
 })
+
+describe("a section's key, on a payload with no positional id", () => {
+  it('keys by the stable id, so a page with several sections keeps distinct keys', () => {
+    const entries = sectionsOf(site([
+      { stableId: 'hero', type: 'Hero', content: doc('alpha') },
+      { stableId: 'features', type: 'Grid', content: doc('beta') },
+    ]))
+    expect(entries.map((e) => e.sectionId)).toEqual(['hero', 'features'])
+    expect(new Set(entries.map((e) => e.id)).size).toBe(2)
+    expect(entries.map((e) => e.anchor)).toEqual(['section-hero', 'section-features'])
+  })
+
+  it("CONTROL — a static build's positional id stays the key", () => {
+    const entries = sectionsOf(site([{ id: '2', stableId: 'insight', type: 'Split', content: doc('alpha') }]))
+    expect(entries[0]).toMatchObject({ sectionId: '2', id: 'section:/how-it-works:2', anchor: 'section-insight' })
+  })
+})
