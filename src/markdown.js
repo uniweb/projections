@@ -22,7 +22,7 @@
  * received while the site build extracted insets, and one it now resolves.*
  */
 
-import { proseMirrorToMarkdown } from '@uniweb/content-writer'
+import { proseMirrorToMarkdown, unwritableNodes } from '@uniweb/content-writer'
 import { sectionDomId } from '@uniweb/core/section-id'
 import { resolveInsetCaptions } from './insets.js'
 
@@ -37,8 +37,7 @@ export const BLOCK_SEPARATOR = '\n\n'
  * Render one page as markdown.
  *
  * ⭐ **A record's page** — one URL of a parametric page — is that page's markdown, then the
- * record as JSON, as it was fetched: its fields as they are, with nothing guessed about how to
- * word them. ⛔ Until 2026-10-23 a host composed this itself.
+ * record (`recordBlocks`). ⛔ Until 2026-10-23 a host composed this itself.
  *
  * @param {Object} page - A collected page (`siteContent.pages[n]`); for a record's page, the
  *   parametric page
@@ -53,8 +52,83 @@ export function renderPageMarkdown(page, { includeChildren = true, record } = {}
     .join(BLOCK_SEPARATOR)
     .trim()
   if (record === undefined || record === null) return markdown
-  const json = jsonBlock(record)
-  return markdown ? `${markdown}${BLOCK_SEPARATOR}${json}` : json
+  return [markdown, ...recordBlocks(record)].filter(Boolean).join(BLOCK_SEPARATOR)
+}
+
+/**
+ * A record as blocks: its fields as JSON, as they were fetched, with nothing guessed about how to
+ * word them, then each of its rich-text fields as the markdown it already is at heart. An article's
+ * body reads as an article, not as 39 KB of ProseMirror.
+ *
+ * ⭐ Only a field that holds a whole document, and only when markdown can carry all of it
+ * (`richTextMarkdown`). A record with a data schema keeps its fields in sections, so the field is
+ * looked for through objects (`body.content`), but not into a list, where it would lose its place.
+ * Anything else stays in the JSON: a complex record has no markdown form that wouldn't lose something,
+ * and an agent reads JSON fine.
+ *
+ * A lone field named `content` is the record's body and needs no introduction. Any other is named in
+ * a comment above it, so what the JSON no longer says, the file still does.
+ *
+ * @param {*} record
+ * @returns {string[]}
+ */
+function recordBlocks(record) {
+  if (!isPlainObject(record)) return [jsonBlock(record)]
+
+  const prose = []
+  const fields = liftRichText(record, [], prose)
+
+  const isBody = prose.length === 1 && prose[0].path.at(-1) === 'content'
+  return [
+    ...(Object.keys(fields).length ? [jsonBlock(fields)] : []),
+    ...prose.map(({ path, markdown }) =>
+      isBody ? markdown : `<!-- ${path.join('.')} -->${BLOCK_SEPARATOR}${markdown}`,
+    ),
+  ]
+}
+
+/**
+ * A copy of `object` without the rich-text fields markdown can carry, each added to `prose` with its
+ * path. A section the lift empties goes too; one that was empty already stays, as it was fetched.
+ *
+ * @param {Object} object
+ * @param {string[]} path
+ * @param {Array<{path: string[], markdown: string}>} prose
+ * @returns {Object}
+ */
+function liftRichText(object, path, prose) {
+  const kept = {}
+  for (const [key, value] of Object.entries(object)) {
+    const here = [...path, key]
+    const markdown = richTextMarkdown(value)
+    if (markdown) {
+      prose.push({ path: here, markdown })
+    } else if (isPlainObject(value) && !isDocument(value)) {
+      const rest = liftRichText(value, here, prose)
+      if (Object.keys(rest).length || !Object.keys(value).length) kept[key] = rest
+    } else {
+      kept[key] = value
+    }
+  }
+  return kept
+}
+
+const isPlainObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const isDocument = (value) => value?.type === 'doc' && Array.isArray(value.content)
+
+/**
+ * A field's markdown, or null when it stays in the JSON: it holds no document, an empty one, or one
+ * with a node markdown cannot carry. The writer leaves such a node out, and the JSON loses nothing.
+ *
+ * @param {*} value
+ * @returns {string|null}
+ */
+function richTextMarkdown(value) {
+  if (!isDocument(value)) return null
+  const doc = resolveInsetCaptions(value)
+  if (unwritableNodes(doc).length) return null
+  return proseMirrorToMarkdown(doc).trim() || null
 }
 
 /**

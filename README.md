@@ -169,7 +169,8 @@ index.
 **Record pages.** A parametric page (`/blog/:slug`) is never listed itself. Pass the record
 entries of a search index as `records` and each record's page is listed in its place. A
 record's page projects as `renderPageMarkdown(parametricPage, { record })`: the page's markdown,
-then the record as JSON.
+then the record's fields as JSON, then each rich-text field as markdown, found through its sections
+(`body.content`) but not in a list. A rich-text field markdown cannot carry whole stays in the JSON.
 
 **Page graph** — `selectIndexablePages`, `groupPagesForIndex`, `buildPageUrl`,
 `applyRouteTranslation`, `isContainer`, `isDynamicTemplate`.
