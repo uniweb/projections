@@ -11,6 +11,7 @@
 import { NOT_FOUND_ROUTE } from '@uniweb/core/resolve-route'
 import { siteAddress } from '@uniweb/core/site-address'
 import { pageMarkdownFilename, normalizeExclude } from './config.js'
+import { inVersionFolder } from './versions.js'
 
 /**
  * Is this page a structural container rather than a page with content?
@@ -137,12 +138,29 @@ export function isKnowledgeRoute(route, roots) {
  * @returns {string[]}
  */
 function excludedBranches(pages, exclude) {
-  const branches = normalizeExclude(exclude)
-  for (const page of pages) {
-    if (!isContainer(page)) continue
-    if (page.seo?.noindex || page.hidden) branches.push(page.route)
-  }
-  return branches.concat(knowledgeRoots(pages))
+  return normalizeExclude(exclude).concat(closedFolders(pages), knowledgeRoots(pages))
+}
+
+/**
+ * The folders whose `noindex` or `hidden` covers the pages in them: containers, for the reason
+ * {@link excludedBranches} gives. The page's own `<head>` says the same (`Page#getHeadMeta`).
+ *
+ * @param {Object[]} pages
+ * @returns {string[]}
+ */
+export function closedFolders(pages) {
+  return pages.filter(page => isContainer(page) && (page.seo?.noindex || page.hidden)).map(page => page.route)
+}
+
+/**
+ * Is a route inside a folder {@link closedFolders} names?
+ *
+ * @param {string} route
+ * @param {string[]} folders
+ * @returns {boolean}
+ */
+export function isInClosedFolder(route, folders) {
+  return folders.some(folder => isAtOrUnder(route, folder))
 }
 
 /**
@@ -187,6 +205,25 @@ export function selectIndexablePages(pages = [], { exclude = [], branch = null }
       !isContainer(page) &&
       (!branch || isAtOrUnder(page.route, branch))
   )
+}
+
+/**
+ * The pages a site's own search may find: {@link selectIndexablePages}, but for older versions of
+ * the docs. An older version's `noindex` asks search engines to send people to the latest. Someone
+ * reading it still needs to search it, so it stays in the site's search, which keeps to the version
+ * being read (kit's `createSearchClient`). Every other reason to leave a page out still holds.
+ *
+ * @param {Object[]} pages - `siteContent.pages` (flat, already ordered)
+ * @param {Object} [options] - as for {@link selectIndexablePages}
+ * @returns {Object[]}
+ */
+export function selectSearchablePages(pages = [], options = {}) {
+  const searchable = pages.map(page =>
+    page.seo?.noindex && inVersionFolder(page.route)
+      ? { ...page, seo: { ...page.seo, noindex: false } }
+      : page
+  )
+  return selectIndexablePages(searchable, options)
 }
 
 /** Route depth: `/docs` → 1, `/docs/authoring` → 2. */

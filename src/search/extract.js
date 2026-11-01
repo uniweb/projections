@@ -1,7 +1,7 @@
 /**
  * Extract searchable content from site-content.json
  *
- * Walks the pages a *visitor* can reach — {@link selectIndexablePages} decides
+ * Walks the pages a *visitor* can reach — {@link selectSearchablePages} decides
  * which those are — and extracts their text for search indexing.
  */
 
@@ -9,7 +9,7 @@
 // contract forbids the package root (it pulls semantic-parser + theming).
 // Enforced by tests/environment.test.js.
 import { sectionDomId } from '@uniweb/core/section-id'
-import { selectIndexablePages } from '../pages.js'
+import { selectSearchablePages } from '../pages.js'
 import { resolveInsetCaptions } from '../insets.js'
 
 /**
@@ -54,7 +54,7 @@ export function extractSearchContent(siteContent, options = {}) {
   //
   // Note this also fixes the prefix test: `excludeRoutes` was matched with
   // `startsWith`, so excluding `/kb` silently excluded `/kbase` too.
-  for (const page of selectIndexablePages(siteContent.pages || [], { exclude: excludeRoutes })) {
+  for (const page of selectSearchablePages(siteContent.pages || [], { exclude: excludeRoutes })) {
     // Extract page-level entry
     if (includePagesFlag) {
       const pageEntry = extractFromPage(page)

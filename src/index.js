@@ -55,6 +55,7 @@ export { resolveMarkdownRequest } from './markdown-request.js'
 
 export {
   selectIndexablePages,
+  selectSearchablePages,
   selectIndexBranches,
   groupPagesForIndex,
   buildPageUrl,
@@ -71,3 +72,5 @@ export {
   getSearchConfig,
   getSearchIndexFilename,
 } from './search/index.js'
+
+export { isVersionFolder, compareVersionFolders, inVersionFolder } from './versions.js'

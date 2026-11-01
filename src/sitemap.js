@@ -12,7 +12,8 @@
  * shows it at, as a visitor would ask (`resolveRoute`). A redirect — authored, or a page with no
  * content going to its content — a rewrite, or nothing is no page to list; a folder that renders its
  * index page lists that page, once. Then the page's own rules: a page kept out of search
- * (`seo.noindex`, its own or the site's), or naming another URL as its canonical, is not listed.
+ * (`seo.noindex`, its own, a folder's it is in, or the site's), or naming another URL as its
+ * canonical, is not listed.
  *
  * ⭐ A RECORD'S PAGE IS A PAGE. A parametric page (`/books/:slug`) is one template in the content,
  * never listed itself. The record pages the caller serves are listed after the site's own pages, as
@@ -24,7 +25,7 @@
 
 import { absoluteUrl, pageUrl, siteAddress } from '@uniweb/core/site-address'
 import { localeUrl, localeUrlOnAddress, resolveRoute, routeIndex } from '@uniweb/core/resolve-route'
-import { isDynamicTemplate, isKnowledgeRoute, knowledgeRoots } from './pages.js'
+import { closedFolders, isDynamicTemplate, isInClosedFolder, isKnowledgeRoute, knowledgeRoots } from './pages.js'
 
 /**
  * A page's own route, as `Page#getNavRoute` has it: an index page's (`/articles/index`) is its
@@ -79,6 +80,7 @@ export function sitemapEntries(siteContent, { records, locale } = {}) {
   // As `normalizeSeo` (`@uniweb/core`) reads the site's and a page's `seo`.
   const siteNoindex = Boolean(config.seo?.noindex)
   const knowledge = knowledgeRoots(pages)
+  const closed = closedFolders(pages)
 
   /** A route's URL in a language: the one `Website#getPageUrl` states, as the address serves it. */
   const urlOf = (route, code) => pageUrl(address, localeUrlOnAddress(index, code, route, context), { trailingSlash })
@@ -118,7 +120,7 @@ export function sitemapEntries(siteContent, { records, locale } = {}) {
     // A draft, and a page written for a site's services rather than its visitors, are not served
     // to crawlers.
     if (page.hidden || isKnowledgeRoute(page.route, knowledge)) continue
-    if (page.seo?.noindex || siteNoindex) continue
+    if (page.seo?.noindex || siteNoindex || isInClosedFolder(page.route, closed)) continue
 
     const loc = urlOf(own, active)
     if (!loc || listed.has(loc)) continue

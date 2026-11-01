@@ -8,7 +8,8 @@
     "./search": "./src/search/index.js",
     "./search/engine": "./src/search/engine.js",
     "./search/result": "./src/search/result.js",
-    "./search/snippet": "./src/search/snippet.js"
+    "./search/snippet": "./src/search/snippet.js",
+    "./versions": "./src/versions.js"
   },
   "files": [
     "src"
