@@ -9,6 +9,7 @@
  */
 
 import { NOT_FOUND_ROUTE } from '@uniweb/core/resolve-route'
+import { isDynamicRoute } from '@uniweb/core/route-match'
 import { siteAddress } from '@uniweb/core/site-address'
 import { pageMarkdownFilename, normalizeExclude } from './config.js'
 import { inVersionFolder } from './versions.js'
@@ -36,7 +37,7 @@ export function isContainer(page) {
  * @returns {boolean}
  */
 export function isDynamicTemplate(page) {
-  return Boolean(page?.isDynamic) || (page?.route || '').includes(':')
+  return Boolean(page?.isDynamic) || isDynamicRoute(page?.route)
 }
 
 /**
