@@ -290,6 +290,33 @@ describe('no schema claims — a collection that is not a blog', () => {
     expect(entries.find((e) => e.id === 'record:things:a').content).toContain('What A is.')
   })
 
+  test('⭐ a rich-text field named in `search.fields` is searched by its words, never `[object Object]`', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'A night of mu' }, { type: 'text', text: 'sic', marks: [{ type: 'bold' }] }, { type: 'text', text: '.' }] },
+        { type: 'paragraph', content: [{ type: 'text', text: 'Black' }, { type: 'hardBreak' }, { type: 'text', text: 'tie.' }] },
+      ],
+    }
+    const entry = generateRecordSearchIndex('events', { route: '/events', search: { fields: ['title', 'body', 'seats', 'tags'] } }, [
+      { $name: 'gala', title: 'Gala', body: doc, seats: 120, tags: ['formal', 'evening'] },
+    ], 'en').entries[0]
+    expect(entry.content).toBe('Gala A night of music. Black tie. 120 formal evening')
+    expect(entry.content).not.toContain('[object Object]')
+    expect(entry.excerpt).toBe('Gala A night of music. Black tie. 120 formal evening')
+  })
+
+  test('the excerpt is one line, and a text that ends its own cut is not cut twice', () => {
+    const entries = generateRecordSearchIndex('notes', { route: '/notes' }, [
+      { $name: 'multi', title: 'M', description: 'Line one.\n\n# Not a heading\nLine two.' },
+      // A build's excerpt of a body: 160 characters and its own dots.
+      { $name: 'built', title: 'B', excerpt: 'a'.repeat(160) + '...' },
+    ], 'en').entries
+    const excerpt = (name) => entries.find((e) => e.id === `record:notes:${name}`).excerpt
+    expect(excerpt('multi')).toBe('Line one. # Not a heading Line two.')
+    expect(excerpt('built')).toBe('a'.repeat(160) + '…')
+  })
+
   test('a long field is still SEARCHABLE even though it is not displayed', () => {
     // The cap is a display-payload decision, not an indexing one — dropping it
     // from both would make long-form records unfindable.

@@ -93,8 +93,36 @@ const isPrimitive = (v) =>
  */
 const DISPLAY_VALUE_MAX = 200
 
-/** `text`, cut to `max` characters when it runs over. */
-const cut = (text, max) => (text.length > max ? text.slice(0, max).trim() + '…' : text)
+/**
+ * `text` as one line, cut to `max` characters when it runs over. The dots a text already ended its
+ * own cut with go, so a build's excerpt (`…...`) is not cut twice into `aa..…`.
+ */
+function excerptOf(text, max) {
+  const line = text.replace(/\s+/g, ' ').trim()
+  return line.length > max ? line.slice(0, max).replace(/[\s.…]+$/u, '') + '…' : line
+}
+
+/**
+ * The words a field holds, for the entry's `content`: a string as written, a number, a list's
+ * words, rich text (a document) as its text; anything else none. ⛔ Until 2026-11-06 a field was
+ * joined as it came, so an authored `search.fields` naming a rich-text field put
+ * `[object Object]` in what a search matches, and in an excerpt made from it.
+ *
+ * @param {*} value
+ * @returns {string}
+ */
+function textOf(value) {
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  if (Array.isArray(value)) return value.map(textOf).filter(Boolean).join(' ')
+  if (!value || typeof value !== 'object') return ''
+  if (value.type === 'text') return typeof value.text === 'string' ? value.text : ''
+  if (value.type === 'hardBreak') return ' '
+  if (!Array.isArray(value.content)) return ''
+  // A paragraph's runs join as written, a word part bold included; blocks are a word apart.
+  const runs = value.content.every((child) => child?.type === 'text' || !Array.isArray(child?.content))
+  return value.content.map(textOf).filter(Boolean).join(runs ? '' : ' ')
+}
 
 /**
  * Search-index entries for one named group of records.
@@ -141,7 +169,7 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
 
   const entries = items.flatMap(item => {
     const fields = declaredFields ?? searchableKeys(item)
-    const content = fields.map(f => item[f] || '').filter(Boolean).join(' ')
+    const content = fields.map((f) => textOf(item[f])).filter(Boolean).join(' ')
     // ⭐ The record's HANDLE — `$name` (`recordHandle`), on every lane since 2026-09-27, when a
     // file-lane record stopped carrying `slug`. ⛔ Until 2026-09-14 this read `slug` alone, so every record that
     // arrived with `$name` and no `slug` got ONE id, `record:<group>:`, and — with no
@@ -174,10 +202,10 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
       content,
       // ⭐ The line the record's own page is described by (`recordDescription`: `description`,
       // then `excerpt`, text only), so a result, the page it opens and its line in `llms.txt`
-      // say the same thing; else the start of what the entry matches on. ⛔ Until 2026-11-06 it
-      // was always the latter: every string field run together, an icon's name and a colour's
-      // hex included.
-      excerpt: cut(recordDescription(item) ?? content, 160),
+      // say the same thing; else the start of what the entry matches on. One line, since it is
+      // one in `llms.txt`. ⛔ Until 2026-11-06 it was always the latter: every string field run
+      // together, an icon's name and a colour's hex included.
+      excerpt: excerptOf(recordDescription(item) ?? content, 160),
       weight,
       item: pickDisplayFields(item),
     }]

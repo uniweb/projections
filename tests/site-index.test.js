@@ -317,4 +317,14 @@ describe('renderSiteIndex — descriptions are plain text', () => {
     expect(entryLines).toHaveLength(1)
     expect(entryLines[0]).toContain('First line second line.')
   })
+
+  test('…an authored one of several lines included: a `#` or a blank line in it is not the index’s', () => {
+    // A YAML block description, or a record's markdown description (2026-11-06).
+    const content = site([
+      page('/x', { title: 'X', description: 'One.\n\n# Not a heading\nTwo.' }),
+    ])
+    const output = renderSiteIndex(content)
+    expect(output).toContain('- [X](/x.md): One. # Not a heading Two.')
+    expect(output.split('\n').some((l) => l.startsWith('# Not a heading'))).toBe(false)
+  })
 })

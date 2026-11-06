@@ -145,7 +145,10 @@ function renderEntry(page, urlOptions, maxChars) {
   if (!title) return ''
 
   const url = markdownUrl(page.route, urlOptions)
-  const description = resolvePageDescription(page, { maxChars })
+  // One line: an entry is a line of the index, and an authored description can hold several (a
+  // YAML block, a record's markdown), whose next line, a `#` or a blank one, would read as the
+  // index's own structure. ⛔ Until 2026-11-06 it was written as it came.
+  const description = resolvePageDescription(page, { maxChars }).replace(/\s+/g, ' ').trim()
 
   return description
     ? `- [${title}](${url}): ${description}`
