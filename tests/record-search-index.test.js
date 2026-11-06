@@ -273,6 +273,23 @@ describe('no schema claims — a collection that is not a blog', () => {
     expect(entry.item).not.toHaveProperty('body') // already in content/excerpt
   })
 
+  test("the excerpt is the record's own description, text only, cut as the content is (2026-11-06)", () => {
+    const entries = generateRecordSearchIndex('things', { route: '/things' }, [
+      { $name: 'a', title: 'A', icon: 'lu-house', description: 'What A is.' },
+      { $name: 'b', title: 'B', description: { type: 'doc', content: [] }, excerpt: 'What B is.' },
+      { $name: 'c', title: 'C', description: 'd'.repeat(300) },
+      { $name: 'd', title: 'D', tagline: 'No description' },
+    ], 'en').entries
+    const excerpt = (name) => entries.find((e) => e.id === `record:things:${name}`).excerpt
+    expect(excerpt('a')).toBe('What A is.')
+    expect(excerpt('b')).toBe('What B is.')
+    expect(excerpt('c')).toBe('d'.repeat(160) + '…')
+    // CONTROL: with none, the start of what the entry matches on, as before.
+    expect(excerpt('d')).toBe('D No description')
+    // and the description is still searched
+    expect(entries.find((e) => e.id === 'record:things:a').content).toContain('What A is.')
+  })
+
   test('a long field is still SEARCHABLE even though it is not displayed', () => {
     // The cap is a display-payload decision, not an indexing one — dropping it
     // from both would make long-form records unfindable.

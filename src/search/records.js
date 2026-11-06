@@ -6,7 +6,7 @@
  * per-record detail files into each item before calling this function.
  */
 
-import { fillRoutePattern, isDynamicRoute, recordHandle, recordRouteBase, recordTitle } from '@uniweb/core/route-match'
+import { fillRoutePattern, isDynamicRoute, recordHandle, recordRouteBase, recordTitle, recordDescription } from '@uniweb/core/route-match'
 
 /**
  * A record's URL, for the search entry.
@@ -93,6 +93,9 @@ const isPrimitive = (v) =>
  */
 const DISPLAY_VALUE_MAX = 200
 
+/** `text`, cut to `max` characters when it runs over. */
+const cut = (text, max) => (text.length > max ? text.slice(0, max).trim() + '…' : text)
+
 /**
  * Search-index entries for one named group of records.
  *
@@ -169,9 +172,12 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
       // handle), so a result and the page it opens are called the same thing.
       title: recordTitle(item) || slug,
       content,
-      excerpt: content.length > 160
-        ? content.slice(0, 160).trim() + '…'
-        : content,
+      // ⭐ The line the record's own page is described by (`recordDescription`: `description`,
+      // then `excerpt`, text only), so a result, the page it opens and its line in `llms.txt`
+      // say the same thing; else the start of what the entry matches on. ⛔ Until 2026-11-06 it
+      // was always the latter: every string field run together, an icon's name and a colour's
+      // hex included.
+      excerpt: cut(recordDescription(item) ?? content, 160),
       weight,
       item: pickDisplayFields(item),
     }]

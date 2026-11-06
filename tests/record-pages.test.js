@@ -32,6 +32,18 @@ describe('renderSiteIndex lists record pages', () => {
     expect(renderSiteIndex(content)).not.toContain('/blog/')
   })
 
+  test("⭐ a record that describes itself is listed with that line, as its page's meta description reads (2026-11-06)", () => {
+    // ⛔ Until then every record was described by its strings run together: an icon's name, a colour.
+    const described = generateRecordSearchIndex('posts', { pattern: '/blog/:slug' }, [
+      { $name: 'hello', title: 'Hello', icon: 'lu-graduation-cap', color: '#2563EB', description: 'The first post.' },
+      { $name: 'rich', title: 'Rich', icon: 'lu-book', description: { type: 'doc', content: [] }, excerpt: 'In short.' },
+    ], 'en').entries
+    const index = renderSiteIndex(content, { records: described })
+    expect(index).toContain('- [Hello](/blog/hello.md): The first post.')
+    expect(index).toContain('- [Rich](/blog/rich.md): In short.')
+    expect(index).not.toContain('lu-graduation-cap')
+  })
+
   test('leaves out what is no record, has no route, or sits in an excluded branch', () => {
     const index = renderSiteIndex(content, {
       records: [...records, { id: 'page:/x', type: 'page', route: '/x', title: 'Not a record' }, { type: 'record', title: 'No route' }],
