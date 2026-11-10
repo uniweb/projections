@@ -8,7 +8,7 @@
  * record's, to answer the same question.
  */
 import { describe, it, expect } from 'vitest'
-import { resolvePageMarkdown, markdownPageRule, selectIndexablePages } from '../src/index.js'
+import { resolvePageMarkdown, resolveAddressMarkdown, markdownPageRule, selectIndexablePages } from '../src/index.js'
 
 const pages = [
   { route: '/', title: 'Home', sections: [{}] },
@@ -76,3 +76,27 @@ describe('resolvePageMarkdown', () => {
     expect(pages.filter(rule.page)).toEqual(selectIndexablePages(pages, { exclude }))
   })
 })
+
+describe('resolveAddressMarkdown — the same answer for a page\'s own address, asked for text/markdown', () => {
+  it('⭐ answers for the page the address shows, as resolvePageMarkdown answers its .md', () => {
+    for (const [address, md] of [['/blog', '/blog.md'], ['/docs/intro', '/docs/intro.md'], ['/blog/hello', '/blog/hello.md'], ['/kb/auth', '/kb/auth.md'], ['/quiet', '/quiet.md']]) {
+      expect(resolveAddressMarkdown(site(), address), address).toEqual(resolvePageMarkdown(site(), md))
+    }
+    expect(resolveAddressMarkdown(site(), '/')).toMatchObject({ kind: 'page', route: '/' })
+  })
+
+  it('takes the address as the visitor asked for it, locale prefix kept', () => {
+    const fr = {
+      pages,
+      config: { languages: ['en', 'fr'], defaultLanguage: 'en', activeLocale: 'fr', i18n: { routeTranslations: { fr: { '/blog': '/blogue' } } } },
+    }
+    expect(resolveAddressMarkdown(fr, '/fr/blogue')).toMatchObject({ kind: 'page', route: '/blog' })
+    expect(resolveAddressMarkdown(fr, '/fr')).toMatchObject({ kind: 'page', route: '/' })
+  })
+
+  it('anything but a page is the address\'s own answer: a container goes to its content\'s address, not a .md', () => {
+    expect(resolveAddressMarkdown(site(), '/docs')).toMatchObject({ kind: 'redirect', location: '/docs/intro' })
+    expect(resolveAddressMarkdown(site(), '/nowhere')).toMatchObject({ kind: 'notFound' })
+  })
+})
+

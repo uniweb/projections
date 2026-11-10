@@ -220,7 +220,8 @@ export function selectIndexablePages(pages = [], { exclude = [], branch = null }
  * those branches, is worked out once.
  *
  * @param {Object} content - one locale's site content (`{ pages, config }`)
- * @returns {{ page: (page: Object) => boolean, record: (route: string) => boolean }}
+ * @returns {{ page: (page: Object) => boolean, record: (route: string) => boolean }} `page` takes a
+ *   page of `content`; `record` takes a record's URL (`/blog/hello`), never its parametric page
  */
 export function markdownPageRule(content) {
   const agents = resolveAgentsConfig(content?.config)

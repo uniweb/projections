@@ -50,8 +50,10 @@ export {
 } from './config.js'
 
 // What a request for a page's markdown names, for a host that answers the links the site index
-// makes: `resolveRoute`'s answer for that page, with a redirect sent to its target's markdown.
-export { resolveMarkdownRequest, resolvePageMarkdown } from './markdown-request.js'
+// makes: `resolveRoute`'s answer for that page, with a redirect sent to its target's markdown. And
+// whether that page has a public markdown document at all, asked by its `.md` path
+// (`resolvePageMarkdown`) or by its own address (`resolveAddressMarkdown`).
+export { resolveMarkdownRequest, resolvePageMarkdown, resolveAddressMarkdown } from './markdown-request.js'
 
 export {
   selectIndexablePages,

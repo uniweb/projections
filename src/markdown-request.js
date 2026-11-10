@@ -117,7 +117,34 @@ export function resolveMarkdownRequest(content, path, context = {}) {
  *   has none is `{ kind: 'notFound', status: 404, page: null }`.
  */
 export function resolvePageMarkdown(content, path, context = {}) {
-  const answer = resolveMarkdownRequest(content, path, context)
+  return heldToTheRule(content, resolveMarkdownRequest(content, path, context))
+}
+
+/**
+ * ⭐ **THE SAME ANSWER FOR A PAGE'S OWN ADDRESS** — a request for `/blog`, or `/fr/blogue`, whose
+ * `Accept` asks for `text/markdown`: whether the page the HTML at that address shows has a public
+ * markdown document, by the rule {@link resolvePageMarkdown} answers by. A host needs no `.md` path
+ * for it, so it builds none.
+ *
+ * Anything but a page is `resolveRoute`'s answer for the address, as the HTML's is (a redirect goes
+ * where the page's own address goes, not to a `.md`), so a host that answers it with the page's HTML
+ * keeps the page's own answer.
+ *
+ * @param {Object} content - one locale's site content
+ * @param {string} address - the page's address as the visitor asked for it, locale prefix kept, with
+ *   any deployment base removed
+ * @param {Object} [context] - `resolveRoute`'s (`activeLocale`, `defaultLocale`)
+ * @returns {Object} as {@link resolvePageMarkdown} answers a page: its page answer, with `record: true`
+ *   on a record's page, or `{ kind: 'notFound', status: 404, page: null }` when it has no public
+ *   markdown document; anything else as `resolveRoute` answers the address
+ */
+export function resolveAddressMarkdown(content, address, context = {}) {
+  const path = typeof address === 'string' && address ? address : '/'
+  return heldToTheRule(content, resolveRoute(routeIndex(content), path, context))
+}
+
+/** A page answer held to `markdownPageRule`; anything else as it came. */
+function heldToTheRule(content, answer) {
   if (!answer || answer.kind !== 'page') return answer
   const rule = markdownPageRule(content)
   const record = Boolean(answer.template) || isDynamicTemplate(answer.page)
