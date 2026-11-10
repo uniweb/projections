@@ -20,6 +20,15 @@
  * (`insets.js::resolveInsetCaptions`). *Until 2026-09-27 this said insets
  * survive as `![desc](@Component){params}` too — a shape this projection never
  * received while the site build extracted insets, and one it now resolves.*
+ *
+ * ⭐ **The records a page's sections show** come after each section, when the
+ * caller hands them in (`sections`): what the page's render read, never worked
+ * out here. The authored part stays a projection of the site alone; the records
+ * are the page's render's, as JSON, named by the site's word for them. Which
+ * records appear is the foundation's choice, since its sections declare them,
+ * and nothing of its rendering appears: no `type`, no params, no words, and no
+ * value a handler derives. This module stays pure and synchronous, and works
+ * out nothing about what a page needs.
  */
 
 import { proseMirrorToMarkdown, unwritableNodes } from '@uniweb/content-writer'
@@ -39,20 +48,90 @@ export const BLOCK_SEPARATOR = '\n\n'
  * ⭐ **A record's page** — one URL of a parametric page — is that page's markdown, then the
  * record (`recordBlocks`). ⛔ Until 2026-10-23 a host composed this itself.
  *
+ * ⭐ **What its sections show from records** (`sections`, from the page's render:
+ * `createPageRenderer(…).render(page, { sectionData: true }).sections`, `@uniweb/runtime/ssr`)
+ * follows each section's markdown: each value named in a comment, `<!-- tiers -->`, and written as a
+ * record is (`recordBlocks`), its whole documents lifted out as markdown under `<!-- tiers.body -->`.
+ * A value the page has already shown under the same name is named again, `<!-- tiers: as above -->`,
+ * and not repeated. A section with no markdown of its own still gets its records, and a section the
+ * page leaves out (`hidden`, or a child when `includeChildren` is false) takes its records with it.
+ * Without `sections`, or with none, the page reads as it did before.
+ *
  * @param {Object} page - A collected page (`siteContent.pages[n]`); for a record's page, the
  *   parametric page
  * @param {Object} [options]
  * @param {boolean} [options.includeChildren=true] - Include nested sections
  * @param {*} [options.record] - the record a parametric page's URL names
+ * @param {Array<{ id: string, data: Object }>} [options.sections] - the records each section showed,
+ *   by its DOM id (`sectionDomId`) and their names
  * @returns {string} Markdown, or '' when the page has no projectable content
  */
-export function renderPageMarkdown(page, { includeChildren = true, record } = {}) {
+export function renderPageMarkdown(page, { includeChildren = true, record, sections } = {}) {
+  if (Array.isArray(sections) && sections.length > 0) {
+    return withSectionRecords(page, { includeChildren, record, sections })
+  }
   const markdown = collectPageBlocks(page, { includeChildren })
     .map(block => block.markdown)
     .join(BLOCK_SEPARATOR)
     .trim()
   if (record === undefined || record === null) return markdown
   return [markdown, ...recordBlocks(record)].filter(Boolean).join(BLOCK_SEPARATOR)
+}
+
+/**
+ * The page with its sections' records after each section: the walk `collectSection` makes, with
+ * each section's records written beside it.
+ *
+ * @param {Object} page
+ * @param {{ includeChildren: boolean, record: *, sections: Array<{ id: string, data: Object }> }} options
+ * @returns {string}
+ */
+function withSectionRecords(page, { includeChildren, record, sections }) {
+  const shown = new Map()
+  for (const entry of sections) {
+    if (typeof entry?.id !== 'string' || !isPlainObject(entry.data)) continue
+    if (!shown.has(entry.id)) shown.set(entry.id, [])
+    shown.get(entry.id).push(entry.data)
+  }
+
+  const written = new Set()
+  const parts = []
+  const visit = (section) => {
+    // A draft section (`hidden: true`) is not published content, and its records go with it.
+    if (section?.hidden) return
+    const markdown = serializeSectionContent(section)
+    if (markdown) parts.push(markdown)
+    const id = sectionDomId(section)
+    for (const data of shown.get(id) || []) {
+      for (const [name, value] of Object.entries(data)) parts.push(...shownBlocks(name, value, written))
+    }
+    // Once: a later section with the same id gets none of these again.
+    shown.delete(id)
+    if (!includeChildren) return
+    for (const child of section?.subsections || []) visit(child)
+  }
+  for (const section of page?.sections || []) visit(section)
+
+  if (record !== undefined && record !== null) parts.push(...recordBlocks(record))
+  return parts.filter(Boolean).join(BLOCK_SEPARATOR)
+}
+
+/**
+ * One value a section showed, as blocks: its name in a comment, then the value as a record is
+ * written — or, when the page already showed it under this name, its name again and no more.
+ *
+ * @param {string} name
+ * @param {*} value
+ * @param {Set<string>} written - what the page has shown so far, by name and value
+ * @returns {string[]}
+ */
+function shownBlocks(name, value, written) {
+  if (value === undefined || value === null) return []
+  const label = name.replace(/--/g, '-')
+  const seen = `${name}\u0000${JSON.stringify(value)}`
+  if (written.has(seen)) return [`<!-- ${label}: as above -->`]
+  written.add(seen)
+  return [`<!-- ${label} -->`, ...recordBlocks(value, label)]
 }
 
 /**
@@ -67,22 +146,25 @@ export function renderPageMarkdown(page, { includeChildren = true, record } = {}
  * and an agent reads JSON fine.
  *
  * A lone field named `content` is the record's body and needs no introduction. Any other is named in
- * a comment above it, so what the JSON no longer says, the file still does.
+ * a comment above it, so what the JSON no longer says, the file still does. A value a section showed
+ * is named (`name`), and each of its fields is named under it, its body too: `<!-- author.bio -->`.
  *
  * @param {*} record
+ * @param {string|null} [name] - the name the value is shown under, for a section's records
  * @returns {string[]}
  */
-function recordBlocks(record) {
+function recordBlocks(record, name = null) {
   if (!isPlainObject(record)) return [jsonBlock(record)]
 
   const prose = []
   const fields = liftRichText(record, [], prose)
 
-  const isBody = prose.length === 1 && prose[0].path.at(-1) === 'content'
+  const isBody = name === null && prose.length === 1 && prose[0].path.at(-1) === 'content'
+  const under = name === null ? [] : [name]
   return [
     ...(Object.keys(fields).length ? [jsonBlock(fields)] : []),
     ...prose.map(({ path, markdown }) =>
-      isBody ? markdown : `<!-- ${path.join('.')} -->${BLOCK_SEPARATOR}${markdown}`,
+      isBody ? markdown : `<!-- ${[...under, ...path].join('.')} -->${BLOCK_SEPARATOR}${markdown}`,
     ),
   ]
 }

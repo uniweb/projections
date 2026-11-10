@@ -110,6 +110,8 @@ describe('buildCorpus', () => {
     const content = docs()
     const [built] = buildCorpus(content)
 
+    // Called without `sections`: the corpus is made per site, not per render, and carries none of
+    // the records a page's sections show (`tests/section-records.test.js`).
     expect(built.markdown).toBe(renderPageMarkdown(content.pages[0]))
   })
 
