@@ -327,3 +327,66 @@ describe('no schema claims — a collection that is not a blog', () => {
     expect(entry.item).not.toHaveProperty('body')
   })
 })
+
+describe('a record served whole indexes as its brief does (2026-11-10)', () => {
+  // ⛔ Until then a whole record — one key per section — entered the index titled by its handle,
+  // with no line and no text: the shape a host's index asks for, measured on the live estate.
+  const doc = (text) => ({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] })
+  const brief = {
+    $uuid: 'u-1',
+    $name: 'markdown-to-docs-site',
+    $tags: [],
+    date: '2026-10-01',
+    tags: ['docs'],
+    title: 'Drop a folder, get a docs site.',
+    excerpt: 'Point it at a folder of markdown and it builds the site.',
+  }
+  const whole = {
+    $uuid: 'u-1',
+    $name: 'markdown-to-docs-site',
+    $tags: [],
+    brief: { title: brief.title, excerpt: brief.excerpt, date: brief.date, tags: brief.tags },
+    body: { content: doc('Every page of the folder becomes a page of the site, its navigation included.') },
+  }
+  const entry = (record, cfg = { route: '/blog' }) => generateRecordSearchIndex('articles', cfg, [record], 'en').entries[0]
+
+  test('⭐ titled and described from its brief section, as the brief is', () => {
+    expect(entry(whole).title).toBe('Drop a folder, get a docs site.')
+    expect(entry(whole).excerpt).toBe(brief.excerpt)
+    expect(entry(whole).title).toBe(entry(brief).title)
+    expect(entry(whole).excerpt).toBe(entry(brief).excerpt)
+  })
+
+  test('⭐ its text is every section\'s, the body included', () => {
+    expect(entry(whole).content).toContain('Drop a folder, get a docs site.')
+    expect(entry(whole).content).toContain('its navigation included')
+  })
+
+  test('its route, id and card fields come from its fields too', () => {
+    expect(entry(whole).route).toBe('/blog/markdown-to-docs-site')
+    expect(entry(whole).id).toBe('record:articles:markdown-to-docs-site')
+    expect(entry(whole).item).toMatchObject({ title: brief.title, date: brief.date })
+  })
+
+  test('an authored `search.fields` is found in its sections', () => {
+    expect(entry(whole, { route: '/blog', search: { fields: ['title'] } }).content).toBe(brief.title)
+  })
+
+  test('a list of section items and a section inside a section give their words too', () => {
+    const faq = { $name: 'faq', intro: { title: 'Questions' }, items: [{ q: 'Does it scroll?', a: 'It does.' }], more: { inner: { note: 'Nested words.' } } }
+    const { content, title } = entry(faq)
+    expect(title).toBe('Questions')
+    expect(content).toContain('Does it scroll? It does.')
+    expect(content).toContain('Nested words.')
+  })
+
+  test('CONTROL — a brief with an object field is still a brief: its own fields first', () => {
+    const person = { $name: 'ada', name: 'Ada Lovelace', employer: { title: 'Analytical Engines' } }
+    expect(entry(person).title).toBe('Ada Lovelace')
+  })
+
+  test('CONTROL — a brief whose field holds a document is still a brief', () => {
+    const post = { $name: 'p', title: 'A post', body: doc('Its body.') }
+    expect(entry(post).title).toBe('A post')
+  })
+})

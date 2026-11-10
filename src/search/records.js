@@ -168,19 +168,25 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
   const items = recordData || []
 
   const entries = items.flatMap(item => {
-    const fields = declaredFields ?? searchableKeys(item)
-    const content = fields.map((f) => textOf(item[f])).filter(Boolean).join(' ')
+    // ⭐ Either shape a record is served in: a brief's fields at its top, a whole record's in its
+    // sections (`recordShape`). The rules below read the fields; the text is every section's.
+    const { fields, sections } = recordShape(item)
+    const content = declaredFields
+      ? declaredFields.map((f) => textOf(fields?.[f])).filter(Boolean).join(' ')
+      : sections
+        ? sectionText(sections)
+        : searchableKeys(item).map((f) => textOf(item[f])).filter(Boolean).join(' ')
     // ⭐ The record's HANDLE — `$name` (`recordHandle`), on every lane since 2026-09-27, when a
     // file-lane record stopped carrying `slug`. ⛔ Until 2026-09-14 this read `slug` alone, so every record that
     // arrived with `$name` and no `slug` got ONE id, `record:<group>:`, and — with no
     // `pattern` — one route, `{route}/`: an entry per record, all opening the list.
-    const slug = recordHandle(item) || item.id || String(item.title || '').toLowerCase().replace(/\s+/g, '-')
+    const slug = recordHandle(item) || fields.id || String(fields.title || '').toLowerCase().replace(/\s+/g, '-')
     // ⭐ A record nothing can address is LEFT OUT: an index lists what a visitor can open, and a
     // result with no route links nowhere — as the string "undefined/my-post" would, ranking
     // correctly and 404ing on click. ⛔ Until 2026-10-23 its entry was kept with no `route`, for a
     // consumer to detect, so each consumer needed a guard of its own (measured by a host that day:
     // `mergeSearchIndexes` passed the entry through).
-    const route = recordRoute(config, item, slug)
+    const route = recordRoute(config, fields, slug)
     if (!route) return []
     return [{
       // ⛔ RENAMED 2026-08-27 — `collection` is FRAMEWORK'S build concept (a named
@@ -198,16 +204,16 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
       route,
       // The rule the record's own page is titled by (`recordTitle`: `title`, `name`, the
       // handle), so a result and the page it opens are called the same thing.
-      title: recordTitle(item) || slug,
+      title: recordTitle(fields) || slug,
       content,
       // ⭐ The line the record's own page is described by (`recordDescription`: `description`,
       // then `excerpt`, text only), so a result, the page it opens and its line in `llms.txt`
       // say the same thing; else the start of what the entry matches on. One line, since it is
       // one in `llms.txt`. ⛔ Until 2026-11-06 it was always the latter: every string field run
       // together, an icon's name and a colour's hex included.
-      excerpt: excerptOf(recordDescription(item) ?? content, 160),
+      excerpt: excerptOf(recordDescription(fields) ?? content, 160),
       weight,
-      item: pickDisplayFields(item),
+      item: pickDisplayFields(fields),
     }]
   })
 
@@ -219,6 +225,64 @@ export function generateRecordSearchIndex(name, config, recordData, locale) {
     locale,
     entries,
   }
+}
+
+/**
+ * ⭐ **A RECORD AS EITHER SHAPE SERVES IT, READ WITH NO SCHEMA.** A brief holds its fields at its
+ * top. A whole record holds one key per section, its brief's fields in one of them (`whole`, ruled
+ * 2026-09-27): `{ $uuid, $name, brief: { title, excerpt }, body: { content } }`. A record every one of
+ * whose own keys holds a section — an object that is no document, or a list of them — is whole: its
+ * fields are each one's first value among its sections, in their order, beside its `$` keys, and its
+ * sections are returned for its text (`sectionText`). A brief is returned as it is.
+ *
+ * ⛔ Until 2026-11-10 a whole record was read by its top alone, so it entered the index titled by its
+ * handle, with no line and no text: on every site whose host asks for records whole, every record of
+ * `llms.txt` and of a site's search (measured by a host on the live estate that day).
+ *
+ * @param {*} record
+ * @returns {{ fields: Object, sections: Array<[string, *]>|null }}
+ */
+function recordShape(record) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return { fields: {}, sections: null }
+  const own = Object.entries(record).filter(([key]) => !key.startsWith('$'))
+  const whole = own.length > 0 && own.every(([, value]) => isSection(value) || isSectionList(value))
+  if (!whole) return { fields: record, sections: null }
+  const fields = {}
+  for (const [key, value] of Object.entries(record)) if (key.startsWith('$')) fields[key] = value
+  for (const [, section] of own) {
+    if (!isSection(section)) continue
+    for (const [key, value] of Object.entries(section)) if (!(key in fields)) fields[key] = value
+  }
+  return { fields, sections: own }
+}
+
+const isSection = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value) && value.type !== 'doc'
+const isSectionList = (value) => Array.isArray(value) && value.length > 0 && value.every(isSection)
+
+/**
+ * The words a whole record holds, every section's: each field's, as `textOf` reads it, a section
+ * inside a section and each item of a list of them included. Our wiring keys, `$` keys and
+ * addresses are none, as for a brief (`searchableKeys`).
+ *
+ * @param {Array<[string, *]>} sections
+ * @returns {string}
+ */
+function sectionText(sections) {
+  const words = []
+  const visit = (section) => {
+    for (const [key, value] of Object.entries(section)) {
+      if (key.startsWith('$') || WIRING_KEYS.has(key)) continue
+      if (isSection(value)) visit(value)
+      else if (isSectionList(value)) value.forEach(visit)
+      else if (typeof value === 'string') { if (value.trim() !== '' && !isAddress(value)) words.push(value) }
+      else {
+        const text = textOf(value)
+        if (text) words.push(text)
+      }
+    }
+  }
+  for (const [, section] of sections) (Array.isArray(section) ? section : [section]).forEach(visit)
+  return words.join(' ')
 }
 
 /**
