@@ -11,7 +11,7 @@
 import { NOT_FOUND_ROUTE } from '@uniweb/core/resolve-route'
 import { isDynamicRoute } from '@uniweb/core/route-match'
 import { siteAddress } from '@uniweb/core/site-address'
-import { pageMarkdownFilename, normalizeExclude } from './config.js'
+import { pageMarkdownFilename, normalizeExclude, resolveAgentsConfig } from './config.js'
 import { inVersionFolder } from './versions.js'
 
 /**
@@ -206,6 +206,30 @@ export function selectIndexablePages(pages = [], { exclude = [], branch = null }
       !isContainer(page) &&
       (!branch || isAtOrUnder(page.route, branch))
   )
+}
+
+/**
+ * ⭐ **WHICH PAGES HAVE A PUBLIC MARKDOWN DOCUMENT** — the one rule, for a static build writing the
+ * files (`agentFiles` in `@uniweb/build`) and for a host answering a request for one
+ * ({@link resolvePageMarkdown}), so the two answer alike for the same content.
+ *
+ * A page has one when the site writes page markdown (`agents.markdown`) and the page is one a
+ * projection may describe ({@link selectIndexablePages}). A record's page, one URL of a parametric
+ * page, has one when its route is outside every excluded branch: `agents.exclude`, a closed folder,
+ * a knowledge branch, a `_` draft. What is worked out from the whole content, the agents config and
+ * those branches, is worked out once.
+ *
+ * @param {Object} content - one locale's site content (`{ pages, config }`)
+ * @returns {{ page: (page: Object) => boolean, record: (route: string) => boolean }}
+ */
+export function markdownPageRule(content) {
+  const agents = resolveAgentsConfig(content?.config)
+  if (!agents.markdown) return { page: () => false, record: () => false }
+  const branches = excludedBranches(Array.isArray(content?.pages) ? content.pages : [], agents.exclude)
+  return {
+    page: (page) => isIndexable(page, branches) && !isContainer(page),
+    record: (route) => typeof route === 'string' && isIndexable({ route }, branches),
+  }
 }
 
 /**

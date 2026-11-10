@@ -15,6 +15,7 @@
 
 import { localeOfPath, resolveRoute, routeIndex } from '@uniweb/core/resolve-route'
 import { markdownFilenameRoute, pageMarkdownFilename } from './config.js'
+import { markdownPageRule, isDynamicTemplate } from './pages.js'
 
 /**
  * The path a `.md` request names a page by, as a visitor would ask for the page: the locale's
@@ -97,3 +98,32 @@ export function resolveMarkdownRequest(content, path, context = {}) {
   if (answer.kind !== 'redirect') return answer
   return { ...answer, location: markdownLocation(answer.location, index, config, context) }
 }
+
+/**
+ * ⭐ **WHETHER A REQUEST NAMES A PUBLIC MARKDOWN DOCUMENT, AND FOR WHICH PAGE** — the whole answer a
+ * host needs to serve `/{route}.md`, or a page's own address asked for `text/markdown` by its `.md`
+ * path: {@link resolveMarkdownRequest}'s answer, held to the rule a static build writes its page
+ * markdown by (`markdownPageRule`). So a host serves a page's markdown exactly where a static build of
+ * the same content writes one, and picks nothing itself: agent-only (`knowledge:`) pages, drafts,
+ * `noindex` and `hidden` pages, excluded branches, a site that turns page markdown off.
+ *
+ * @param {Object} content - one locale's site content, as {@link resolveMarkdownRequest} takes it
+ * @param {string} path - the request path, with any deployment base removed
+ * @param {Object} [context] - `resolveRoute`'s (`activeLocale`, `defaultLocale`)
+ * @returns {Object|null} null when the path is not a `.md` path. A redirect or a rewrite as
+ *   {@link resolveMarkdownRequest} gives it. A page that has a public markdown document is
+ *   `resolveRoute`'s page answer, with `record: true` on a record's page (`page` is then the
+ *   parametric page and `route` the record's URL; the page's render gives its record). A page that
+ *   has none is `{ kind: 'notFound', status: 404, page: null }`.
+ */
+export function resolvePageMarkdown(content, path, context = {}) {
+  const answer = resolveMarkdownRequest(content, path, context)
+  if (!answer || answer.kind !== 'page') return answer
+  const rule = markdownPageRule(content)
+  const record = Boolean(answer.template) || isDynamicTemplate(answer.page)
+  if (!(record ? rule.record(answer.route) : rule.page(answer.page))) {
+    return { kind: 'notFound', status: 404, page: null }
+  }
+  return record ? { ...answer, record: true } : answer
+}
+
