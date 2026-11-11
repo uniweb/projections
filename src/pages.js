@@ -70,6 +70,19 @@ export function isAtOrUnder(route, prefix) {
 }
 
 /**
+ * Is a route in a branch an `exclude:` list names? The one rule every such list follows —
+ * `agents.exclude`, `services.search.exclude.routes`, `i18n.exclude`: route prefixes matched by whole
+ * segment, the leading slash optional and a trailing one ignored, no wildcards (`normalizeExclude`).
+ *
+ * @param {string} route
+ * @param {*} exclude - the list as written
+ * @returns {boolean}
+ */
+export function isInExcludedBranch(route, exclude) {
+  return normalizeExclude(exclude).some(prefix => isAtOrUnder(route, prefix))
+}
+
+/**
  * The routes carrying `knowledge: true` — the roots of the agent-only branches.
  *
  * ⚠️ Defined here, in the lower layer, rather than in `corpus.js` where the

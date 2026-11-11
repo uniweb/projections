@@ -65,6 +65,7 @@ export {
   applyRouteTranslation,
   isContainer,
   isDynamicTemplate,
+  isInExcludedBranch,
 } from './pages.js'
 
 export {
